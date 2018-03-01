@@ -1,0 +1,3 @@
+bin/
+*.xcodeproj/
+.DS_Store
