@@ -10,21 +10,37 @@ float pointySin(float x, vector <float> harmonics) {
     return out;
 }
 
+float envelope(float age, float death, float attack, float release) {
+    float out = 0.0;
+    if (age < 0) return 0;  // wat
+    if (age < attack) {
+        out = age / attack;
+    } else {
+        out = 1.0;
+    }
+    if (death > 0) {
+        if (age - death > release) {
+            out = 0;
+        } else {
+            out *= ofMap(age, death, death + release, 1, 0);
+        }
+    }
+    return out;
+}
+
 //--------------------------------------------------------------
 void ofApp::setup(){
-    midiIn.listPorts(); // via instance
-    midiIn.openPort(2);
+    midiIn.listPorts();
+    midiIn.openPort(2);  // use MidiPipe to map keystation -> chan 1, kontrol -> 2
     midiIn.addListener(this);
-
     ofSoundStreamSetup(2, 0);
 
     step = 0;
-    amp = 1;
-    freq = 440.0;
     harmonicAmps.assign(8, 0.0);
-    harmonicAmps[0] = 0.2;
-    keys_down_count = 0;
-    
+    harmonicAmps[0] = 0.4;
+    attack = 0.1;
+    release = 0.333;
+
     for (int i = 0; i <= 108; i++) {  // 88-key midi note range max
         float f = pow(2, (i - 69) / 12.0) * 440;
         freqs.push_back(f);
@@ -33,22 +49,36 @@ void ofApp::setup(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
-
+    vector <Sound> toRemove;
+    for (int i = 0; i < notes.size(); i++) {
+        Sound note = notes[i];
+        if (note.died == 0) continue;
+        if ((step - note.died) / 44100.0 > release * 2) {  // eh for safety... not too harmful to have silent notes hanging on
+            toRemove.push_back(note);
+        }
+    }
+    for (int i = 0; i < toRemove.size(); i++) {
+        size_t j;
+        for (j = 0; notes[i].pitch != toRemove[i].pitch && i < notes.size(); i++);
+        notes.erase(notes.begin() + i);
+    }
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
+    ofSetBackgroundColor(0x44);
     float px_step = 1.0 / ofGetWidth() * TWO_PI;
     ofPolyline wave;
     for (int x = -10; x < ofGetWidth() + 10; x++) {
         float signal = pointySin(x * px_step, harmonicAmps);
         wave.addVertex(x, ofMap(signal, -1, 1, 3 * ofGetHeight() / 4, ofGetHeight() / 4));
     }
-    ofSetLineWidth(2);
+    ofSetLineWidth(3);
+    ofSetColor(0xFF, 0x44, 0x88);
     wave.draw();
 }
 
-//--------------------------------------------------------------
+//---------------------------------`-----------------------------
 void ofApp::newMidiMessage(ofxMidiMessage& msg) {
     if (msg.channel == 1) {  // keystation
         if (msg.velocity == 0) {
@@ -71,18 +101,22 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
 
 //--------------------------------------------------------------
 void ofApp::handleNoteOff(int pitch) {
-    keys_down_count -= 1;
-    if (keys_down_count <= 0) {
-        amp = 0.0;
-        keys_down_count = 0;
-    }
+    size_t i;
+    for (i = 0; notes[i].pitch != pitch && i < notes.size(); i++);
+    notes[i].died = step;
 }
 
 //--------------------------------------------------------------
 void ofApp::handleNoteOn(int pitch, int velocity) {
-    keys_down_count += 1;
-    freq = pow(2, (pitch - 69) / 12.0) * 440;
-    amp = ofMap(velocity, 0, 127, 0, 1);
+    // if it already exists, update
+    // else
+    float vel = ofMap(velocity, 0, 127, 0, 1);
+    notes.push_back(Sound {
+        (unsigned int)pitch,
+        vel,
+        step,
+        0,
+    });
 }
 
 //--------------------------------------------------------------
@@ -105,11 +139,19 @@ void ofApp::handleMute(int slider) {
 }
 
 void ofApp::audioOut(ofSoundBuffer &outBuffer) {
-    float phase_step = freq / outBuffer.getSampleRate() * TWO_PI;
-    for (int i = 0; i < outBuffer.getNumFrames(); i++) {
-        float sample = pointySin((step + i) * phase_step, harmonicAmps) * amp;
-        outBuffer.getSample(i, 0) = sample;
-        outBuffer.getSample(i, 1) = sample;
+    for (int i = 0; i < notes.size(); i++) {
+        Sound note = notes[i];
+        float amp = note.velocity;
+        float phase_step = freqs[note.pitch] / outBuffer.getSampleRate() * TWO_PI;
+        for (int i = 0; i < outBuffer.getNumFrames(); i++) {
+            uint64_t s = step + i;
+            float age = (s - note.started) / (float)outBuffer.getSampleRate();
+            float death = note.died == 0 ? 0 : (note.died - note.started) / (float)outBuffer.getSampleRate();
+            float env = envelope(age, death, attack, release);
+            float sample = pointySin(s * phase_step, harmonicAmps) * amp * env * 0.3;
+            outBuffer.getSample(i, 0) += sample;
+            outBuffer.getSample(i, 1) += sample;
+        }
     }
     step += outBuffer.getNumFrames();
 }

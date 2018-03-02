@@ -3,6 +3,13 @@
 #include "ofMain.h"
 #include "ofxMidi.h"
 
+struct Sound {
+    unsigned int pitch;
+    float velocity;
+    uint64_t started;
+    uint64_t died;
+};
+
 class ofApp : public ofBaseApp, public ofxMidiListener {
 
 	public:
@@ -34,11 +41,11 @@ class ofApp : public ofBaseApp, public ofxMidiListener {
         ofxMidiMessage midiMessage;
     
         vector <float> freqs;
-    
-        float amp;
-        float freq;
-        unsigned int keys_down_count;
+        vector <Sound> notes;
+
         vector <float> harmonicAmps;
-    
+        float attack;
+        float release;
+
         uint64_t step;
 };
