@@ -33,6 +33,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener {
         void handleNoteOff(int pitch);
         void handleNoteOn(int pitch, int velocity);
         void handleSlider(int slider, int value);
+        void handleKnob(int slider, int value);
         void handleSolo(int slider);
         void handleMute(int slider);
         void audioOut(ofSoundBuffer &outBuffer);
@@ -45,6 +46,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener {
 
         vector <float> harmonicAmps;
         float attack;
+        float sustain;
         float release;
 
         uint64_t step;
