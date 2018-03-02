@@ -52,6 +52,11 @@ void ofApp::setup(){
         float f = pow(2, (i - 69) / 12.0) * 440;
         freqs.push_back(f);
     }
+    
+    recording = false;
+    loop_set = false;
+    loop_start = 0;
+    loop_length = 0;
 }
 
 //--------------------------------------------------------------
@@ -59,7 +64,10 @@ void ofApp::update(){
     vector <unsigned int> pitches_to_remove;
     for (int i = 0; i < notes.size(); i++) {
         Sound note = notes[i];
-        if (note.died && ((step - note.died) / 44100.0 > release * 1.1)) {
+        if (note.died &&
+            step > note.died &&
+            ((step - note.died) / 44100.0 > release * 1.1)) {
+            cout << "killing cause " << (step - note.died) / 44100.0 << endl;
             pitches_to_remove.push_back(note.pitch);
         }
     }
@@ -129,6 +137,8 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
             handleKnob(msg.control % 8, msg.value);
         } else if (32 <= msg.control && msg.control <= 39) {
             handleSolo(msg.control % 8);
+        } else if (40 <= msg.control && msg.control <= 47) {
+            handleButtons(msg.control % 8, msg.value);
         } else if (48 <= msg.control && msg.control <= 55) {
             handleMute(msg.control % 8);
         } else {
@@ -147,12 +157,20 @@ void ofApp::handleNoteOff(int pitch) {
 //--------------------------------------------------------------
 void ofApp::handleNoteOn(int pitch, int velocity) {
     float vel = ofMap(velocity, 0, 127, 0, 1);
-    notes.push_back(Sound {
+    Sound sound = Sound {
         (unsigned int)pitch,
         vel,
         step,
         0,
-    });
+    };
+    notes.push_back(sound);
+    if (recording) {
+        uint64_t at = loop_set ? ((step - loop_start) % loop_length) : (step - loop_start);
+        loop_sounds.push_back(LoopSound {
+            sound,
+            at,
+        });
+    }
 }
 
 //--------------------------------------------------------------
@@ -180,12 +198,69 @@ void ofApp::handleSolo(int slider) {
     }
 }
 
+void ofApp::handleButtons(int button, int value) {
+    if (value != 127) return;  // keyDown only
+    if (button == 5) {  // rec
+        playing = true;
+        if (recording) {
+            if (!loop_set) {
+                loop_set = true;
+                loop_length = step - loop_start;
+            } else {
+                recording = false;
+            }
+        } else {
+            recording = true;
+            if (!loop_set) {
+                loop_start = step;
+            }
+        }
+    } else if (button == 1) {  // play
+        if (!playing && !recording && !loop_set) {
+            return;
+        }
+        if (!playing) {
+            playing = true;
+            loop_start = step;
+        }
+        if (recording) {
+            recording = false;
+            if (!loop_set) {
+                loop_set = true;
+                loop_length = step - loop_start;
+            } else {
+                recording = false;
+            }
+        }
+    } else if (button == 2) {  // stop
+        playing = false;
+        if (recording) {
+            recording = false;
+        }
+    }
+    cout << button << " and now: recording? " << recording << " loop set? " << loop_set << " playing? " << playing << " recorded notes: " << loop_sounds.size() << endl;
+}
+
 //--------------------------------------------------------------
 void ofApp::handleMute(int slider) {
     harmonicAmps[slider] = 0.0;
 }
 
 void ofApp::audioOut(ofSoundBuffer &outBuffer) {
+    if (loop_set && playing) {
+        uint64_t buff_loop_range_start = (step - loop_start) % loop_length;
+        uint64_t buff_loop_range_end = buff_loop_range_start + outBuffer.getNumFrames();
+        for (int i = 0; i < loop_sounds.size(); i++) {
+            LoopSound ls = loop_sounds[i];
+            if (buff_loop_range_start <= ls.at && ls.at < buff_loop_range_end) {
+                Sound note = ls.sound;
+//                note.died = step + 22050;
+                note.started = step;  // plus whatever
+                note.died = note.started + 20000;
+                notes.push_back(note);
+            }
+        }
+    }
     for (int i = 0; i < notes.size(); i++) {
         Sound note = notes[i];
         float amp = note.velocity;

@@ -10,6 +10,11 @@ struct Sound {
     uint64_t died;
 };
 
+struct LoopSound {
+    Sound sound;
+    uint64_t at;
+};
+
 class ofApp : public ofBaseApp, public ofxMidiListener {
 
 	public:
@@ -36,6 +41,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener {
         void handleKnob(int slider, int value);
         void handleSolo(int slider);
         void handleMute(int slider);
+        void handleButtons(int button, int value);
         void audioOut(ofSoundBuffer &outBuffer);
 
         ofxMidiIn midiIn;
@@ -48,6 +54,14 @@ class ofApp : public ofBaseApp, public ofxMidiListener {
         float attack;
         float sustain;
         float release;
+    
+        bool recording;
+        bool loop_set;
+        uint64_t loop_start;
+        uint64_t loop_length;
+        bool playing;
+
+        vector <LoopSound> loop_sounds;
 
         uint64_t step;
 };
