@@ -38,8 +38,8 @@ void ofApp::setup(){
     step = 0;
     harmonicAmps.assign(8, 0.0);
     harmonicAmps[0] = 0.4;
-    attack = 0.1;
-    release = 0.333;
+    attack = 0.06;
+    release = 0.2;
 
     for (int i = 0; i <= 108; i++) {  // 88-key midi note range max
         float f = pow(2, (i - 69) / 12.0) * 440;
@@ -49,19 +49,14 @@ void ofApp::setup(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
-    vector <Sound> toRemove;
+    vector <Sound> stillAlive;
     for (int i = 0; i < notes.size(); i++) {
         Sound note = notes[i];
-        if (note.died == 0) continue;
-        if ((step - note.died) / 44100.0 > release * 2) {  // eh for safety... not too harmful to have silent notes hanging on
-            toRemove.push_back(note);
+        if (note.died == 0 || (step - note.died) / 44100.0 < release * 1.1) {
+            stillAlive.push_back(note);
         }
     }
-    for (int i = 0; i < toRemove.size(); i++) {
-        size_t j;
-        for (j = 0; notes[i].pitch != toRemove[i].pitch && i < notes.size(); i++);
-        notes.erase(notes.begin() + i);
-    }
+    notes = stillAlive;
 }
 
 //--------------------------------------------------------------
@@ -108,9 +103,19 @@ void ofApp::handleNoteOff(int pitch) {
 
 //--------------------------------------------------------------
 void ofApp::handleNoteOn(int pitch, int velocity) {
-    // if it already exists, update
-    // else
     float vel = ofMap(velocity, 0, 127, 0, 1);
+    // if it already exists, update
+    size_t i;
+    for (i = 0; i < notes.size(); i++) {
+        Sound note = notes[i];
+        if (note.pitch == pitch) {
+            note.started = step;
+            note.velocity = vel;
+            note.died = 0;
+            return;
+        }
+    }
+    // else
     notes.push_back(Sound {
         (unsigned int)pitch,
         vel,
