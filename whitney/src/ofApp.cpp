@@ -22,15 +22,18 @@ ofPoint posToPx(ofPoint pos) {
     return ofPoint(x, y);
 }
 
-void dashed(ofPoint a, ofPoint b, int period) {
+void dashed(ofPoint a, ofPoint b, int period, float duty) {
     int steps = (b - a).length() / period;
     for (int i = 0; i < steps; i++) {
         double x1 = a.x + i * (b.x - a.x) / steps;
         double y1 = a.y + i * (b.y - a.y) / steps;
-        double x2 = a.x + (i + 0.5) * (b.x - a.x) / steps;
-        double y2 = a.y + (i + 0.5) * (b.y - a.y) / steps;
+        double x2 = a.x + (i + duty) * (b.x - a.x) / steps;
+        double y2 = a.y + (i + duty) * (b.y - a.y) / steps;
         ofDrawLine(x1, y1, x2, y2);
     }
+}
+void dashed(ofPoint a, ofPoint b, int period) {
+    dashed(a, b, period, 0.5);
 }
 
 void drawTarget(ofPoint pos) {
@@ -38,11 +41,12 @@ void drawTarget(ofPoint pos) {
     ofPoint y(0, 1);
     
     ofSetColor(0xFF, 0xFF, 0xFF, 0x44);
-    dashed(ofPoint(ofGetWidth() / 2, ofGetHeight()), posToPx(pxToPos(pos.x, pos.y) * 2), 8);
-    dashed(ofPoint(0, pos.y), ofPoint(ofGetWidth(), pos.y), 8);
+    double scaleToScreen = (double)ofGetHeight() / (ofGetHeight() - pos.y);
+    dashed(ofPoint(ofGetWidth() / 2, ofGetHeight()), posToPx(pxToPos(pos.x, pos.y) * scaleToScreen), 8, 0.25);
+    dashed(ofPoint(0, pos.y), ofPoint(ofGetWidth(), pos.y), 8, 0.25);
 
     int crossSize = 16;
-    ofSetColor(0xFF, 0, 0);
+    ofSetColor(0xFF, 0x22, 0);
     ofSetLineWidth(2);
     ofDrawLine(pos + (-y * crossSize), pos + (y * crossSize));
     ofDrawLine(pos + (-x * crossSize), pos + (x * crossSize));
@@ -57,12 +61,18 @@ void drawTrajectory(double theta) {
     dashed(posToPx(ofPoint(0, 0)), posToPx(ofPoint(1000, 1000)), 8);
 }
 
+void drawPlane(double now, Plane plane) {
+    if (plane.struck > 0 || plane.position(now) > pxToMetres(ofGetWidth() / 2)) return;
+    ofSetColor(0xFF);
+    ofDrawCircle(posToPx(ofPoint(plane.position(now), plane.altitude)), 10);
+}
+
 //--------------------------------------------------------------
 void ofApp::setup(){
     mouseAim.set(1, 1);
     aimHeight = 0;
-    viewTheta = 0;
-    aimTheta = 0;
+    viewTheta = PI;
+    aimTheta = PI;
 }
 
 //--------------------------------------------------------------
@@ -83,17 +93,30 @@ void ofApp::update(){
         deltaTheta = deltaTheta > 0 ? maxThetaStep : -maxThetaStep;
     }
     viewTheta += deltaTheta;
-    
     aimTheta = viewTheta / 2;
+    
+    // should a new plane appear?
+    // weird actual probability https://eev.ee/blog/2018/01/02/random-with-care/#random-frequency
+    double lastAppearance = planes.size() == 0 ? -100 : planes.back().appeared;
+    double timeSince = (now / 1000000.0) - lastAppearance;
+    double increasingWeight = (1.0 - 1.0 / timeSince) * BORINGNESS;
+    if (ofRandom(1) < increasingWeight * dt) {
+        Plane plane(now / 1000000.0, pxToPos(0, 0).x, ofRandom(500, VIEW_HEIGHT - 100), ofRandom(50, 300));
+        planes.push_back(plane);
+    }
 
     lastUpdate = now;
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-    ofSetBackgroundColor(0x44);
+    double now = ofGetElapsedTimeMicros()/ 1000000.0;  // seconds
+    ofSetBackgroundColor(0x22);
     drawTarget(posToPx(ofPoint(aimHeight / tan(viewTheta), aimHeight)));
     drawTrajectory(aimTheta);
+    for (int i = 0; i < planes.size(); i++) {
+        drawPlane(now, planes[i]);
+    }
 }
 
 //--------------------------------------------------------------

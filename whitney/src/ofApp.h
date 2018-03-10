@@ -1,12 +1,13 @@
 #pragma once
 
 #include "ofMain.h"
+#include "plane.hpp"
 
 #define GRAVITY 9.81  // metres / sec^2
 #define VIEW_HEIGHT 3000  // metres
 #define MAX_SCOPE_TRACK 1  // radian / sec
 #define LAUNCH_VELOCITY 800  // metres / sec (??)
-
+#define BORINGNESS 0.5  // 0.1 is boring
 
 class ofApp : public ofBaseApp{
 
@@ -32,4 +33,6 @@ class ofApp : public ofBaseApp{
         double aimHeight;
         double viewTheta;
         double aimTheta;
+
+        vector <Plane> planes;
 };
