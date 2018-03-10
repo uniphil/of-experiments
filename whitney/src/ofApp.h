@@ -30,9 +30,15 @@ class ofApp : public ofBaseApp{
 
         ofPoint mouseAim;
         uint64_t lastUpdate;
+    
+        // "aim": where the launcher is pointing
         double aimHeight;
-        double viewTheta;
         double aimTheta;
+
+        // "view": where the scope is pointing (laggs behind mouse due to max on rotational velocity)
+        double lastViewPosition;
+        double viewVelocity;
+        double viewTheta;
 
         vector <Plane> planes;
 };
