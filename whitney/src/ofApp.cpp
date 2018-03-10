@@ -96,10 +96,10 @@ void drawInfo(double height, double aimTheta, double velocity, bool ready) {
     ofSetColor(0x22, 0xFF, 0x44);
     stringstream reportStr;
     reportStr << std::fixed << std::setprecision(0) << std::setfill('0')
-              << "target height: " << std::setw(5) << height << " m" << endl
-              << " target speed: " << std::setw(5) << velocity << " m/s" << endl
-              << "          aim: " << std::setw(4) << std::setprecision(2) << aimTheta <<  " rad" << endl
-              << "   boffors 40: " << (ready ? "ready" : "reloading");
+              << "target altitude: " << std::setw(5) << height << " m" << endl
+              << "target velocity: " << std::setw(5) << velocity << " m/s" << endl
+              << "bofors 40 state: " << (ready ? "ready. <space> to fire" : "reloading...") << endl
+              << "      canon aim: " << std::setw(4) << std::setprecision(2) << aimTheta <<  " rad" << endl;
     ofDrawBitmapString(reportStr.str(), 20, 20);
 }
 
