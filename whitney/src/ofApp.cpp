@@ -122,8 +122,9 @@ void ofApp::setup(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
-    uint64_t now = ofGetElapsedTimeMicros();  // useconds
-    double dt = (now - lastUpdate) / 1000000.0;  // seconds
+    uint64_t nowMicro = ofGetElapsedTimeMicros();  // useconds
+    double now = nowMicro / 1000000.0;  // seconds
+    double dt = (nowMicro - lastUpdate) / 1000000.0;  // seconds
 
     // for now, height just updates live
     aimHeight = mouseAim.y;
@@ -156,7 +157,7 @@ void ofApp::update(){
     // should a new plane appear?
     // weird actual probability https://eev.ee/blog/2018/01/02/random-with-care/#random-frequency
     double lastAppearance = planes.size() == 0 ? -100 : planes.back().appeared;
-    double timeSince = (now / 1000000.0) - lastAppearance;
+    double timeSince = now - lastAppearance;
     double increasingWeight = (1.0 - 1.0 / timeSince) * BORINGNESS;
     if (ofRandom(1) < increasingWeight * dt) {
         double vel = sqrt(ofRandom(1)) / 2;  // boo random sucks I just want a nice symmetric hump-looking beta dist :(
@@ -164,11 +165,26 @@ void ofApp::update(){
             vel = 1 - vel;
         }
         vel = vel * (PLANE_MAX_SPEED - PLANE_MIN_SPEED) * 2 + PLANE_MIN_SPEED;
-        Plane plane(now / 1000000.0, pxToPos(0, 0).x, ofRandom(800, VIEW_HEIGHT - 100), ofRandom(50, 300));
+        Plane plane(now, pxToPos(0, 0).x, ofRandom(800, VIEW_HEIGHT - 100), ofRandom(50, 300));
         planes.push_back(plane);
     }
+    
+    // are there any hits?
+    for (int i = 0; i < projectiles.size(); i++) {
+        Projectile& proj = projectiles[i];
+        if (proj.struck > 0) continue;
 
-    lastUpdate = now;
+        for (int j = 0; j < planes.size(); j++) {
+            Plane& plane = planes[j];
+            if (plane.struck > 0) continue;
+            if (plane.strike(now, proj.position(now))) {
+                proj.struck = now;
+                break;
+            }
+        }
+    }
+
+    lastUpdate = nowMicro;
     lastViewPosition = viewPosition;
 }
 
