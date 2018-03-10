@@ -2,11 +2,16 @@
 
 #include "ofMain.h"
 #include "plane.hpp"
+#include "projectile.hpp"
 
 #define GRAVITY 9.81  // metres / sec^2
-#define VIEW_HEIGHT 3000  // metres
+#define PLANE_MAX_SPEED 130 // m/s
+#define PLANE_CRUISE_SPEED 83  // m/s
+#define PLANE_MIN_SPEED PLANE_CRUISE_SPEED - (PLANE_MAX_SPEED - PLANE_CRUISE_SPEED)  // m/s
+#define VIEW_HEIGHT 4500  // metres
 #define MAX_SCOPE_TRACK 1  // radian / sec
-#define LAUNCH_VELOCITY 800  // metres / sec (??)
+#define LAUNCH_VELOCITY 881  // metres / sec (boffors 40 L60)
+#define RELOAD_TIME 1.0  // seconds, 30s for boffors 40 L60
 #define BORINGNESS 0.5  // 0.1 is boring
 
 class ofApp : public ofBaseApp{
@@ -41,4 +46,5 @@ class ofApp : public ofBaseApp{
         double viewTheta;
 
         vector <Plane> planes;
+        vector <Projectile> projectiles;
 };

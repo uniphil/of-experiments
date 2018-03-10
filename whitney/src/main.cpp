@@ -1,6 +1,7 @@
 #include "ofMain.h"
 #include "ofApp.h"
 #include "plane.hpp"
+#include "projectile.hpp"
 
 //========================================================================
 int main( ){

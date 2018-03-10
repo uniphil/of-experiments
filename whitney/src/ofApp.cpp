@@ -56,25 +56,59 @@ void drawTarget(ofPoint pos) {
 }
 
 void drawTrajectory(double theta) {
-    double vx = LAUNCH_VELOCITY * sin(theta);
-    double vy = LAUNCH_VELOCITY * cos(theta);
-    dashed(posToPx(ofPoint(0, 0)), posToPx(ofPoint(1000, 1000)), 8);
+    ofSetColor(0xFF, 0xFF, 0, 0x44);
+    for (double t = 0; t < 10; t += 0.0667) {
+        double x = LAUNCH_VELOCITY * t * cos(theta);
+        double y = LAUNCH_VELOCITY * t * sin(theta) - (0.5 * GRAVITY * pow(t, 2));
+        ofFill();
+        ofDrawCircle(posToPx(ofPoint(x, y)), 1);
+    }
 }
 
 void drawPlane(double now, Plane plane) {
     if (plane.struck > 0 || plane.position(now) > pxToMetres(ofGetWidth() / 2)) return;
     ofSetColor(0xFF);
+    ofNoFill();
     ofDrawCircle(posToPx(ofPoint(plane.position(now), plane.altitude)), 10);
 }
 
-void drawInfo(double height, double aimTheta, double velocity) {
+void drawProjectile(double now, Projectile projectile) {
+    if (projectile.struck > 0) return;
+    ofSetColor(0xFF, 0xCC, 0x00);
+    ofDrawCircle(posToPx(projectile.position(now)), 3);
+}
+
+void drawInfo(double height, double aimTheta, double velocity, bool ready) {
     ofSetColor(0x22, 0xFF, 0x44);
     stringstream reportStr;
     reportStr << std::fixed << std::setprecision(0) << std::setfill('0')
               << "target height: " << std::setw(5) << height << " m" << endl
               << " target speed: " << std::setw(5) << velocity << " m/s" << endl
-              << "          aim: " << std::setw(4) << std::setprecision(2) << aimTheta <<  " rad";
+              << "          aim: " << std::setw(4) << std::setprecision(2) << aimTheta <<  " rad" << endl
+              << "        canon: " << (ready ? "ready" : "reloading");
     ofDrawBitmapString(reportStr.str(), 20, 20);
+}
+
+bool canonReady(double now, vector <Projectile> projectiles) {
+    double lastFire = projectiles.size() == 0 ? 0 : projectiles.back().appeared;
+    double timeSince = now - lastFire;
+    return timeSince > RELOAD_TIME;
+}
+
+double timeOfImpact(double x, double y, double planeVelocity, double projectileVelocity) {
+    double a = pow(projectileVelocity, 2) - pow(planeVelocity, 2);
+    double b = x * planeVelocity;
+    double c = pow(x, 2) + pow(y, 2);
+    double d = pow(b, 2) + a * c;
+    return (b + sqrt(d)) / a;
+//    double t = 0;
+//    if (d >= 0) {
+//        t = (b + sqrt(d)) / a;
+//        if (t < 0) {
+//            t = 0;
+//        }
+//    }
+//    return t;
 }
 
 //--------------------------------------------------------------
@@ -104,12 +138,20 @@ void ofApp::update(){
         deltaTheta = deltaTheta > 0 ? maxThetaStep : -maxThetaStep;
     }
     viewTheta += deltaTheta;
-    aimTheta = viewTheta / 2;
-    
+
     // measure velocity
     double viewPosition = aimHeight / tan(viewTheta);
     double velocity = (viewPosition - lastViewPosition) / dt;
-    viewVelocity = (viewVelocity * 5 + velocity) / 6;  // some averaging to smooth it out
+    viewVelocity = (viewVelocity * 99 + velocity) / 100;  // some averaging to smooth it out
+
+    // aim the cannon
+    // the projectile moves pretty quick, so we ignore gravity
+    // ...it's a cheat. including gravity requires solving a quartic :/
+    double leadTime = timeOfImpact(viewPosition, aimHeight, viewVelocity, LAUNCH_VELOCITY);
+    double impactPosition = viewPosition + leadTime * viewVelocity;
+    aimTheta = impactPosition > 0
+        ? atan(aimHeight / impactPosition)
+        : PI - atan(aimHeight / abs(impactPosition));
 
     // should a new plane appear?
     // weird actual probability https://eev.ee/blog/2018/01/02/random-with-care/#random-frequency
@@ -117,7 +159,12 @@ void ofApp::update(){
     double timeSince = (now / 1000000.0) - lastAppearance;
     double increasingWeight = (1.0 - 1.0 / timeSince) * BORINGNESS;
     if (ofRandom(1) < increasingWeight * dt) {
-        Plane plane(now / 1000000.0, pxToPos(0, 0).x, ofRandom(500, VIEW_HEIGHT - 100), ofRandom(50, 300));
+        double vel = sqrt(ofRandom(1)) / 2;  // boo random sucks I just want a nice symmetric hump-looking beta dist :(
+        if (ofRandom(1) > 0.5) {  // the other side of the hump thing
+            vel = 1 - vel;
+        }
+        vel = vel * (PLANE_MAX_SPEED - PLANE_MIN_SPEED) * 2 + PLANE_MIN_SPEED;
+        Plane plane(now / 1000000.0, pxToPos(0, 0).x, ofRandom(800, VIEW_HEIGHT - 100), ofRandom(50, 300));
         planes.push_back(plane);
     }
 
@@ -134,12 +181,19 @@ void ofApp::draw(){
     for (int i = 0; i < planes.size(); i++) {
         drawPlane(now, planes[i]);
     }
-    drawInfo(aimHeight, aimTheta, viewVelocity);
+    for (int i = 0; i < projectiles.size(); i++) {
+        drawProjectile(now, projectiles[i]);
+    }
+    drawInfo(aimHeight, aimTheta, viewVelocity, canonReady(now, projectiles));
 }
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-
+    if (key != ' ') return;
+    double now = ofGetElapsedTimeMicros() / 1000000.0;
+    if (!canonReady(now, projectiles)) return;
+    Projectile projectile(now, aimTheta, LAUNCH_VELOCITY);
+    projectiles.push_back(projectile);
 }
 
 //--------------------------------------------------------------
