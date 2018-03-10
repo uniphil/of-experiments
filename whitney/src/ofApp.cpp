@@ -46,7 +46,7 @@ void drawTarget(ofPoint pos) {
     dashed(ofPoint(0, pos.y), ofPoint(ofGetWidth(), pos.y), 8, 0.25);
 
     int crossSize = 16;
-    ofSetColor(0xFF, 0x22, 0);
+    ofSetColor(0xFF, 0x22, 0, 0x88);
     ofSetLineWidth(2);
     ofDrawLine(pos + (-y * crossSize), pos + (y * crossSize));
     ofDrawLine(pos + (-x * crossSize), pos + (x * crossSize));
@@ -56,8 +56,8 @@ void drawTarget(ofPoint pos) {
 }
 
 void drawTrajectory(double theta) {
-    ofSetColor(0xFF, 0xFF, 0, 0x44);
-    for (double t = 0; t < 10; t += 0.0667) {
+    ofSetColor(0xFF, 0x22, 0, 0x44);
+    for (double t = 0; t < 10; t += 0.032) {
         double x = LAUNCH_VELOCITY * t * cos(theta);
         double y = LAUNCH_VELOCITY * t * sin(theta) - (0.5 * GRAVITY * pow(t, 2));
         ofFill();
@@ -67,15 +67,29 @@ void drawTrajectory(double theta) {
 
 void drawPlane(double now, Plane plane) {
     if (plane.struck > 0 || plane.position(now) > pxToMetres(ofGetWidth() / 2)) return;
-    ofSetColor(0xFF);
+    ofPoint pos(plane.position(now), plane.altitude);
+    double l = plane.length / 2;
+    ofPoint x(1, 0);
+    ofPoint y(0, 1);
+    ofPolyline outline;
+    outline.addVertex(posToPx(pos + -1*l*x + -.3*l*y));  // bottom left
+    outline.addVertex(posToPx(pos + 1*l*x + -.3*l*y));  // bottom right
+    outline.addVertex(posToPx(pos + 1*l*x + -0.1*l*y));  // nose
+    outline.addVertex(posToPx(pos + 0.8*l*x + 0*l*y));  // top of nose
+    outline.addVertex(posToPx(pos + -0.7*l*x + 0*l*y));  // root of tail
+    outline.addVertex(posToPx(pos + -0.8*l*x + 0.3*l*y));  // top of tail
+    outline.addVertex(posToPx(pos + -0.95*l*x + 0.3*l*y));  // back top
+    outline.addVertex(posToPx(pos + -1*l*x + -0.2*l*y));  // close it up
+    ofSetColor(0x44, 0x88, 0xFF);
     ofNoFill();
-    ofDrawCircle(posToPx(ofPoint(plane.position(now), plane.altitude)), 10);
+    outline.draw();
 }
 
 void drawProjectile(double now, Projectile projectile) {
     if (projectile.struck > 0) return;
-    ofSetColor(0xFF, 0xCC, 0x00);
-    ofDrawCircle(posToPx(projectile.position(now)), 3);
+    ofFill();
+    ofSetColor(0xFF, 0x88, 0x00);
+    ofDrawCircle(posToPx(projectile.position(now)), 1.5);
 }
 
 void drawInfo(double height, double aimTheta, double velocity, bool ready) {
@@ -85,7 +99,7 @@ void drawInfo(double height, double aimTheta, double velocity, bool ready) {
               << "target height: " << std::setw(5) << height << " m" << endl
               << " target speed: " << std::setw(5) << velocity << " m/s" << endl
               << "          aim: " << std::setw(4) << std::setprecision(2) << aimTheta <<  " rad" << endl
-              << "        canon: " << (ready ? "ready" : "reloading");
+              << "   boffors 40: " << (ready ? "ready" : "reloading");
     ofDrawBitmapString(reportStr.str(), 20, 20);
 }
 
@@ -101,14 +115,6 @@ double timeOfImpact(double x, double y, double planeVelocity, double projectileV
     double c = pow(x, 2) + pow(y, 2);
     double d = pow(b, 2) + a * c;
     return (b + sqrt(d)) / a;
-//    double t = 0;
-//    if (d >= 0) {
-//        t = (b + sqrt(d)) / a;
-//        if (t < 0) {
-//            t = 0;
-//        }
-//    }
-//    return t;
 }
 
 //--------------------------------------------------------------
@@ -118,6 +124,7 @@ void ofApp::setup(){
     aimHeight = VIEW_HEIGHT / 2;
     viewTheta = PI;
     aimTheta = PI;
+    ofHideCursor();
 }
 
 //--------------------------------------------------------------
@@ -165,7 +172,9 @@ void ofApp::update(){
             vel = 1 - vel;
         }
         vel = vel * (PLANE_MAX_SPEED - PLANE_MIN_SPEED) * 2 + PLANE_MIN_SPEED;
-        Plane plane(now, pxToPos(0, 0).x, ofRandom(800, VIEW_HEIGHT - 100), ofRandom(50, 300));
+        double alt = ofRandom(800, VIEW_HEIGHT - 100);
+        double big = ofRandom(800, VIEW_HEIGHT - 100) < alt;
+        Plane plane(now, pxToPos(0, 0).x, alt, vel, ofRandom(1) > 0.333);
         planes.push_back(plane);
     }
     
