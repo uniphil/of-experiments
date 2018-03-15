@@ -47,9 +47,11 @@ void drawTarget(ofPoint pos) {
 
     int crossSize = 16;
     ofSetColor(0xFF, 0x22, 0, 0x88);
-    ofSetLineWidth(2);
-    ofDrawLine(pos + (-y * crossSize), pos + (y * crossSize));
-    ofDrawLine(pos + (-x * crossSize), pos + (x * crossSize));
+    ofSetLineWidth(1);
+    ofDrawLine(pos + (-y * crossSize), pos + (-y * crossSize / 3));
+    ofDrawLine(pos + (y * crossSize), pos + (y * crossSize / 3));
+    ofDrawLine(pos + (-x * crossSize), pos + (-x * crossSize / 3));
+    ofDrawLine(pos + (x * crossSize), pos + (x * crossSize / 3));
     ofSetLineWidth(1);
     ofNoFill();
     ofDrawCircle(pos, crossSize - 5);
@@ -57,7 +59,7 @@ void drawTarget(ofPoint pos) {
 
 void drawTrajectory(double theta) {
     ofSetColor(0xFF, 0x22, 0, 0x44);
-    for (double t = 0; t < 10; t += 0.032) {
+    for (double t = 0; t < 10; t += 0.016) {
         double x = LAUNCH_VELOCITY * t * cos(theta);
         double y = LAUNCH_VELOCITY * t * sin(theta) - (0.5 * GRAVITY * pow(t, 2));
         ofFill();
@@ -150,16 +152,20 @@ void ofApp::update(){
     // measure velocity
     double viewPosition = aimHeight / tan(viewTheta);
     double velocity = (viewPosition - lastViewPosition) / dt;
+    if (velocity < 0) velocity = 0;
+    if (velocity > PLANE_MAX_SPEED * 2) velocity = PLANE_MAX_SPEED * 2;
     viewVelocity = (viewVelocity * 99 + velocity) / 100;  // some averaging to smooth it out
 
     // aim the cannon
     // the projectile moves pretty quick, so we ignore gravity
     // ...it's a cheat. including gravity requires solving a quartic :/
     double leadTime = timeOfImpact(viewPosition, aimHeight, viewVelocity, LAUNCH_VELOCITY);
+    // fudge a gravity adjustment
+    double lostHeight = 0.5 * GRAVITY * pow(leadTime, 2);
     double impactPosition = viewPosition + leadTime * viewVelocity;
     aimTheta = impactPosition > 0
-        ? atan(aimHeight / impactPosition)
-        : PI - atan(aimHeight / abs(impactPosition));
+        ? atan((aimHeight + lostHeight) / impactPosition)
+        : PI - atan((aimHeight + lostHeight) / abs(impactPosition));
 
     // should a new plane appear?
     // weird actual probability https://eev.ee/blog/2018/01/02/random-with-care/#random-frequency
