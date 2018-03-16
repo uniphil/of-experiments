@@ -12,7 +12,7 @@
 #define MAX_SCOPE_TRACK 0.873  // radian / sec (50deg/sec)
 #define LAUNCH_VELOCITY 881  // metres / sec (bofors 40 L60)
 #define RELOAD_TIME 0.7  // seconds, 80-100 rounds/min
-#define BORINGNESS 0.05  // 0.01 is very boring
+#define BORINGNESS 0.001  // 0.001 is very boring
 
 class ofApp : public ofBaseApp{
 

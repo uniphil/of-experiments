@@ -171,7 +171,8 @@ void ofApp::update(){
     // weird actual probability https://eev.ee/blog/2018/01/02/random-with-care/#random-frequency
     double lastAppearance = planes.size() == 0 ? -100 : planes.back().appeared;
     double timeSince = now - lastAppearance;
-    double increasingWeight = (1.0 - 1.0 / timeSince) * BORINGNESS;
+    double increasingWeight = 1.0 - 1.0 / (1 + timeSince * BORINGNESS);
+    cout << increasingWeight << endl;
     if (ofRandom(1) < increasingWeight * dt) {
         double vel = sqrt(ofRandom(1)) / 2;  // boo random sucks I just want a nice symmetric hump-looking beta dist :(
         if (ofRandom(1) > 0.5) {  // the other side of the hump thing
