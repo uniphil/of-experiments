@@ -22,6 +22,7 @@ class ofApp : public ofBaseApp{
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
 
+        unsigned int imSize;
         unsigned int camWidth;
         unsigned int camHeight;
         ofVideoGrabber vidGrabber;
@@ -35,6 +36,11 @@ class ofApp : public ofBaseApp{
         kiss_fftnd_cfg kissCfg;
         kiss_fft_cpx * fftGreyIn;
         kiss_fft_cpx * fftOut;
+    
+        vector <float> rowAverage;
+        vector <float> colAverage;
+        vector <float> squareAverage;
+        vector <float> ringAverage;
 
         bool ready;
 };
