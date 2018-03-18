@@ -4,7 +4,12 @@
 #include "kiss_fft.h"
 #include "kiss-ndfft.hpp"
 
-#define N_FFT_OUT 2048
+#define N_FFT_OUT 1024
+
+typedef struct {
+    double angle;
+    kiss_fft_cpx cpx;
+} angle_freq;
 
 class ofApp : public ofBaseApp{
 
@@ -38,6 +43,12 @@ class ofApp : public ofBaseApp{
         kiss_fftnd_cfg kissNdCfg;
         kiss_fft_cpx * fftGreyIn;
         kiss_fft_cpx * fftOut;
+
+        kiss_fft_cpx * fftFilteredIn;
+        kiss_fft_cpx * fftFilteredOut;
+        angle_freq * maxByRadius;
+        ofPixels fftFilteredPixels;
+        ofTexture fftFilteredTexture;
 
         kiss_fft_cfg kissCfg;
         kiss_fft_cpx * fftLeftIn;
