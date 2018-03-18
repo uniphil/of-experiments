@@ -19,23 +19,23 @@ void ofApp::setup(){
 
     greyPixels.allocate(imSize, imSize, OF_PIXELS_RGB);
     greyTexture.allocate(greyPixels);
-    shiftedPixels.allocate(imSize, imSize, OF_PIXELS_RGB);
-    shiftedTexture.allocate(shiftedPixels);
-    fftPixels.allocate(imSize, imSize, OF_PIXELS_RGB);  // mono?
+    fftPixels.allocate(imSize / 2, imSize / 2, OF_PIXELS_RGB);  // mono?
     fftTexture.allocate(fftPixels);
     
     int dims [2] = { (int)imSize, (int)imSize };
-    kissCfg = kiss_fftnd_alloc(dims, 2, false, 0, 0);
+    kissNdCfg = kiss_fftnd_alloc(dims, 2, false, 0, 0);
     fftGreyIn = new kiss_fft_cpx[imSize * imSize];
     fftOut = new kiss_fft_cpx[imSize * imSize];
+
+    kissCfg = kiss_fft_alloc(imSize, true, 0, 0);
+    fftLeftIn = new kiss_fft_cpx[imSize];
+    fftLeftOut = new kiss_fft_cpx[imSize];
+    fftRightIn = new kiss_fft_cpx[imSize];
+    fftRightOut = new kiss_fft_cpx[imSize];
+
     for (size_t i = 0; i < imSize * imSize; i++) {
         fftGreyIn[i].i = 0.0;  // imaginary part is always zero
     }
-    
-    rowAverage.assign(imSize, 0.0);
-    colAverage.assign(imSize, 0.0);
-    squareAverage.assign(imSize / 2, 0.0);
-    ringAverage.assign(imSize / 2, 0.0);
 
     ofSetVerticalSync(true);
     ready = true;
@@ -43,6 +43,7 @@ void ofApp::setup(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
+    ofBackground(0);
     vidGrabber.update();
 
     if (vidGrabber.isFrameNew() && ready) {  // boo races
@@ -54,41 +55,50 @@ void ofApp::update(){
                 ofColor c = pixels.getColor(x + (camWidth - imSize) / 2, y + (camHeight - imSize) / 2);
                 float l = c.getLightness();
                 greyPixels.setColor(x, y, ofColor(l));
-                float shifted = l * pow(-1, x+y);
-                shiftedPixels.setColor(x, y, ofColor(ofMap(shifted, -255, 255, 0, 255)));
-                fftGreyIn[y * imSize + x].r = shifted;  // shifted
+                fftGreyIn[y * imSize + x].r = l;
             }
         }
 
         greyTexture.loadData(greyPixels);
-        shiftedTexture.loadData(shiftedPixels);
-        kiss_fftnd(kissCfg, fftGreyIn, fftOut);
-        
-        for (int i = 0; i < rowAverage.size(); i++) rowAverage[i] = 0;
-        for (int i = 0; i < colAverage.size(); i++) colAverage[i] = 0;
-        for (int i = 0; i < squareAverage.size(); i++) squareAverage[i] = 0;
-        for (int i = 0; i < ringAverage.size(); i++) ringAverage[i] = 0;
+        kiss_fftnd(kissNdCfg, fftGreyIn, fftOut);
+    
+        for (int i = 0; i < imSize; i++) {
+            fftLeftIn[i].r = fftLeftIn[i].i = fftRightIn[i].r = fftRightIn[i].i = 0;
+        }
 
-        for (size_t x = 0; x < imSize; x++) {
-            for (size_t y = 0; y < imSize; y++) {
-                size_t outI = y * imSize + x;
-                float l = log(sqrt(pow(fftOut[outI].r, 2) + pow(fftOut[outI].i, 2))) * 8;
-                fftPixels.setColor(x, y, ofColor(max(0.0, min(l, 255.0))));
+        for (size_t x = 0; x < imSize / 2; x++) {
+            for (size_t y = 0; y < imSize / 2; y++) {
+                int ring = sqrt(pow(x, 2) + pow(y, 2));
+                if (ring < imSize / 2) {
+                    size_t outI = y * imSize + x;
+                    kiss_fft_cpx out = fftOut[outI];
 
-                rowAverage[y] += l / imSize;
-                colAverage[x] += l / imSize;
-                int xc = abs((int)imSize / 2 - (int)x);
-                int yc = abs((int)imSize / 2 - (int)y);
-                if (xc < squareAverage.size() && yc < squareAverage.size()) {
-                    int currentSquare = max(xc, yc);
-                    squareAverage[currentSquare] += l / (currentSquare * 2);
-                }
-                int currentRing = sqrt(pow(xc, 2) + pow(yc, 2));
-                if (currentRing < ringAverage.size()) {
-                    ringAverage[currentRing] += l / (2 * PI * currentRing);
+                    float l = log(sqrt(pow(out.r, 2) + pow(out.i, 2)) / 255) * 16;
+                    fftPixels.setColor(x, y, ofColor(max(0.0, min(l, 255.0))));
+
+                    double theta = asin(y / (ring ? ring : 1));
+                    double pan = theta / (PI / 2);  // quarter turn
+
+                    double real = out.r / (ring * PI / 2);
+                    double imaj = out.i / (ring * PI / 2);
+
+                    fftLeftIn[ring].r += (1 - pan) * real;
+                    fftLeftIn[ring].i += (1 - pan) * imaj;
+                    fftLeftIn[imSize - ring].r += (1 - pan) * real;
+                    fftLeftIn[imSize - ring].i = (1 - pan) * imaj;
+
+                    fftRightIn[ring].r += pan * real;
+                    fftRightIn[ring].i += pan * imaj;
+                    fftRightIn[imSize - ring].r += pan * real;
+                    fftRightIn[imSize - ring].i += pan * imaj;
+                } else {
+                    fftPixels.setColor(x, y, 0);
                 }
             }
         }
+        
+        kiss_fft(kissCfg, fftLeftIn, fftLeftOut);
+        kiss_fft(kissCfg, fftRightIn, fftRightOut);
 
         fftTexture.loadData(fftPixels);
     }
@@ -98,46 +108,36 @@ void ofApp::update(){
 void ofApp::draw(){
     ofSetColor(0xFF);
     vidGrabber.draw(20, 20, camWidth, camHeight);
-    greyTexture.draw(20 + 20 + camWidth, 20, imSize, imSize);
-    shiftedTexture.draw(20, 20 + 20 + imSize, imSize, imSize);
-    fftTexture.draw(20 + 20 + imSize, 20 + 20 + imSize, imSize, imSize);
-
-    float graphMax = 100;
+    greyTexture.draw(20, 20 + camHeight + 20, imSize, imSize);
+    float imDiag = sqrt(2 * pow(imSize / 2, 2));
 
     ofPushMatrix();
-    ofTranslate(20, (20 + imSize * 2) + 100);
-    ofPolyline colGraph;
-    for (int i = 0; i < colAverage.size(); i++) {
-        colGraph.addVertex(ofPoint(i, graphMax - colAverage[i]));
-    }
-    colGraph.draw();
+    ofTranslate(20 + imSize + 20 + imDiag / 2, 20 + camHeight + 20 + imDiag);
+    ofRotate(-135);
+    fftTexture.draw(0, 0, imSize / 2, imSize / 2);
     ofPopMatrix();
-    
-    ofPushMatrix();
-    ofTranslate(20 + 20 + imSize, (20 + imSize) * 2 + 100);
-    ofPolyline rowGraph;
-    for (int i = 0; i < rowAverage.size(); i++) {
-        rowGraph.addVertex(ofPoint(i, graphMax - rowAverage[i]));
+
+    ofPolyline leftSpectrum;
+    ofPolyline rightSpectrum;
+    for (int i = 0; i < imSize / 2; i++) {
+        float left = log(sqrt(pow(fftLeftIn[i].r, 2) + pow(fftLeftIn[i].i, 2))) * 3;
+        leftSpectrum.addVertex(ofPoint(i, -left));
+        float right = log(sqrt(pow(fftRightIn[i].r, 2) + pow(fftRightIn[i].i, 2))) * 3;
+        rightSpectrum.addVertex(ofPoint(i, -right));
     }
-    rowGraph.draw();
+
+    ofPushMatrix();
+    ofSetHexColor(0xFFFF00);
+    ofTranslate(20 + imSize + 20 + imDiag + 20, 20 + imSize + 20 + imDiag / 2);
+    leftSpectrum.draw();
+    ofDrawLine(0, 0, imSize / 2, 0);
     ofPopMatrix();
-    
+
     ofPushMatrix();
-    ofTranslate(20 + 20 + imSize + 20 + imSize, (20 + imSize) * 2 + 100);
-    ofPolyline squareGraph;
-    for (int i = 0; i < squareAverage.size(); i++) {
-        squareGraph.addVertex(ofPoint(i, graphMax - squareAverage[i]));
-    }
-    squareGraph.draw();
-    ofPopMatrix();
-    
-    ofPushMatrix();
-    ofTranslate(20 + 20 + imSize + 20 + imSize + 20 + squareAverage.size(), (20 + imSize) * 2 + 100);
-    ofPolyline ringGraph;
-    for (int i = 0; i < ringAverage.size(); i++) {
-        ringGraph.addVertex(ofPoint(i, graphMax - ringAverage[i]));
-    }
-    ringGraph.draw();
+    ofSetHexColor(0xFF0000);
+    ofTranslate(20 + imSize + 20 + imDiag + 20, 20 + imSize + 20 + imDiag);
+    rightSpectrum.draw();
+    ofDrawLine(0, 0, imSize / 2, 0);
     ofPopMatrix();
 }
 

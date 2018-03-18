@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ofMain.h"
+#include "kiss_fft.h"
 #include "kiss-ndfft.hpp"
 
 class ofApp : public ofBaseApp{
@@ -28,19 +29,18 @@ class ofApp : public ofBaseApp{
         ofVideoGrabber vidGrabber;
         ofPixels greyPixels;
         ofTexture greyTexture;
-        ofPixels shiftedPixels;
-        ofTexture shiftedTexture;
         ofPixels fftPixels;
         ofTexture fftTexture;
     
-        kiss_fftnd_cfg kissCfg;
+        kiss_fftnd_cfg kissNdCfg;
         kiss_fft_cpx * fftGreyIn;
         kiss_fft_cpx * fftOut;
-    
-        vector <float> rowAverage;
-        vector <float> colAverage;
-        vector <float> squareAverage;
-        vector <float> ringAverage;
+
+        kiss_fft_cfg kissCfg;
+        kiss_fft_cpx * fftLeftIn;
+        kiss_fft_cpx * fftLeftOut;
+        kiss_fft_cpx * fftRightIn;
+        kiss_fft_cpx * fftRightOut;
 
         bool ready;
 };
