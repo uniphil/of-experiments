@@ -40,6 +40,8 @@ void ofApp::setup(){
     maxByRadius = new angle_freq[imSize / 2];
     fftFilteredIn = new kiss_fft_cpx[imSize * imSize];
     fftFilteredOut = new kiss_fft_cpx[imSize * imSize];
+    fftFilteredOutPixels.allocate(imSize, imSize, OF_PIXELS_RGB);
+    fftFilteredOutTexture.allocate(fftFilteredOutPixels);
 
     kissCfg = kiss_fft_alloc(imSize, true, 0, 0);
     fftLeftIn = new kiss_fft_cpx[N_FFT_OUT];
@@ -149,19 +151,31 @@ void ofApp::update(){
                 }
             }
         }
-        cout << "min, max: " << minT << ", " << maxT << endl;
         
         fftTexture.loadData(fftPixels);
         
         for (int radius = 0; radius < imSize / 2; radius++) {
             angle_freq f = maxByRadius[radius];
+            kiss_fft_cpx inv = f.cpx;
+            inv.r *= -1;
+            inv.i *= -1;
             int y = radius * sin(f.angle);
             int x = radius * cos(f.angle);
             ofColor c = heat(abs(f.cpx) * 4);
             fftFilteredPixels.setColor(imSize / 2 + x, imSize / 2 - y, c);
-            fftFilteredIn[(imSize - y) * imSize + x + imSize / 2] = f.cpx;
+            fftFilteredIn[(imSize / 2 - y) * imSize + imSize / 2 + x] = f.cpx;
+            fftFilteredIn[(imSize / 2 + y) * imSize + imSize / 2 - x] = inv;
         }
         fftFilteredTexture.loadData(fftFilteredPixels);
+        kiss_fftnd(kissNdCfg, fftFilteredIn, fftFilteredOut);
+        
+        for (int x = 0; x < imSize; x++) {
+            for (int y = 0; y < imSize; y++) {
+                ofColor c = heat(abs(fftFilteredOut[y * imSize + x]) / 64);
+                fftFilteredOutPixels.setColor(x, y, c);
+            }
+        }
+        fftFilteredOutTexture.loadData(fftFilteredOutPixels);
         
 //        kiss_fft(kissCfg, fftLeftIn, fftLeftOut);
 //        kiss_fft(kissCfg, fftRightIn, fftRightOut);
@@ -185,6 +199,11 @@ void ofApp::draw(){
     ofPushMatrix();
     ofTranslate(20 + imSize + 20, 20 + camHeight + 20 + imSize / 2);
     fftFilteredTexture.draw(0, 0, imSize, imSize / 2);
+    ofPopMatrix();
+    
+    ofPushMatrix();
+    ofTranslate(20 + imSize + 20 + imSize + 20, 20 + camHeight + 20);
+    fftFilteredOutTexture.draw(0, 0, imSize, imSize);
     ofPopMatrix();
 
 //    ofPolyline leftSpectrum;

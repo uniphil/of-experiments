@@ -49,6 +49,8 @@ class ofApp : public ofBaseApp{
         angle_freq * maxByRadius;
         ofPixels fftFilteredPixels;
         ofTexture fftFilteredTexture;
+        ofPixels fftFilteredOutPixels;
+        ofTexture fftFilteredOutTexture;
 
         kiss_fft_cfg kissCfg;
         kiss_fft_cpx * fftLeftIn;
