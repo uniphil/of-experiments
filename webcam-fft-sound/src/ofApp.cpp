@@ -9,6 +9,13 @@ float abs(kiss_fft_cpx s) {
     return sqrt(pow(s.r, 2) + pow(s.i, 2));
 }
 
+kiss_fft_cpx scale(kiss_fft_cpx in, float scale) {
+    kiss_fft_cpx out;
+    out.r = in.r * scale;
+    out.i = in.i * scale;
+    return out;
+}
+
 ofColor heat(float l) {
     return ofColor(min(l, 255.0), min(l / 4, 255.0), l > 1024 ? 255 : 0);
 }
@@ -108,7 +115,6 @@ void ofApp::update(){
         for (int i = 0; i < N_FFT_OUT; i++) {
             fftLeftIn[i].r = fftLeftIn[i].i = fftRightIn[i].r = fftRightIn[i].i = 0;
         }
-        double minT = INFINITY, maxT = -INFINITY;
 
         for (size_t x = 0; x < imSize; x++) {
             for (size_t y = 0; y < imSize / 2; y++) {
@@ -119,37 +125,20 @@ void ofApp::update(){
                     fftPixels.setColor(x, y, ofColor(0));
                 } else if (ring < imSize / 2) {
                     size_t outI = y * imSize + x;
-                    kiss_fft_cpx out = fftOut[outI];
+                    double lowCut = min((double)ring / 32.0, 1.0);
+                    kiss_fft_cpx out = scale(fftOut[outI], lowCut);
 
-                    float l = abs(out) * 4;
+                    float l = abs(fftOut[outI]) * 4;
                     fftPixels.setColor(x, y, heat(l));
 
                     double theta = xSpecOrigin > 0
                         ? atan(ySpecOrigin / (xSpecOrigin == 0 ? 0.00001 : (double)xSpecOrigin))
                         : PI - atan(ySpecOrigin / (xSpecOrigin == 0 ? 0.00001 : abs((double)xSpecOrigin)));
 
-                    minT = min(minT, theta);
-                    maxT = max(maxT, theta);
-
                     if (abs(out) > abs(maxByRadius[ring].cpx)) {
                         maxByRadius[ring].angle = theta;
                         maxByRadius[ring].cpx = out;
                     }
-
-                    double pan = theta / PI;  // half turn
-
-                    double real = out.r / (ring * PI);
-                    double imaj = out.i / (ring * PI);
-
-                    fftLeftIn[ring].r += (1 - pan) * real;
-                    fftLeftIn[ring].i += (1 - pan) * imaj;
-                    fftLeftIn[N_FFT_OUT - ring].r += (1 - pan) * -real;
-                    fftLeftIn[N_FFT_OUT - ring].i += (1 - pan) * -imaj;
-
-                    fftRightIn[ring].r += pan * real;
-                    fftRightIn[ring].i += pan * imaj;
-                    fftRightIn[N_FFT_OUT - ring].r += pan * -real;
-                    fftRightIn[N_FFT_OUT - ring].i += pan * -imaj;
                 } else {
                     fftPixels.setColor(x, y, 0);
                 }
@@ -160,15 +149,21 @@ void ofApp::update(){
         
         for (int radius = 0; radius < imSize / 2; radius++) {
             angle_freq f = maxByRadius[radius];
-            kiss_fft_cpx inv = f.cpx;
-            inv.r *= -1;
-            inv.i *= -1;
+            kiss_fft_cpx re = f.cpx;
+            kiss_fft_cpx inv = scale(re, -1);
             int y = radius * sin(f.angle);
             int x = radius * cos(f.angle);
-            ofColor c = heat(abs(f.cpx) * 4);
+            ofColor c = heat(abs(re) * 4);
             fftFilteredPixels.setColor(imSize / 2 + x, imSize / 2 - y, c);
-            fftFilteredIn[(imSize / 2 - y) * imSize + imSize / 2 + x] = f.cpx;
+            fftFilteredIn[(imSize / 2 - y) * imSize + imSize / 2 + x] = re;
             fftFilteredIn[(imSize / 2 + y) * imSize + imSize / 2 - x] = inv;
+
+            double pan = f.angle / PI;
+
+            fftLeftIn[radius] = scale(re, 1 - pan);
+            fftLeftIn[N_FFT_OUT - radius] = scale(inv, 1 - pan);
+            fftRightIn[radius] = scale(re, pan);
+            fftRightIn[N_FFT_OUT - radius] = scale(inv, pan);
         }
         fftFilteredTexture.loadData(fftFilteredPixels);
         kiss_fftnd(kissNdCfg, fftFilteredIn, fftFilteredOut);
@@ -177,15 +172,14 @@ void ofApp::update(){
             for (int y = 0; y < imSize; y++) {
                 int shift = pow(-1, x + y);  // uncentre the fft
                 float clamp = 10000;
-//                float c = ofMap(, -clamp, clamp, 0, 255, true);
                 float l = fftFilteredOut[y * imSize + x].r * shift / 32;
                 fftFilteredOutPixels.setColor(x, y, cool(max(l, 0.0)));
             }
         }
         fftFilteredOutTexture.loadData(fftFilteredOutPixels);
         
-//        kiss_fft(kissCfg, fftLeftIn, fftLeftOut);
-//        kiss_fft(kissCfg, fftRightIn, fftRightOut);
+        kiss_fft(kissCfg, fftLeftIn, fftLeftOut);
+        kiss_fft(kissCfg, fftRightIn, fftRightOut);
     }
 }
 
@@ -194,12 +188,10 @@ void ofApp::draw(){
     if (!ready) return;
     ofSetColor(0xFF);
 //    vidGrabber.draw(20, 20, camWidth, camHeight);
-    greyTexture.draw(20, 20 + camHeight + 20, imSize, imSize);
-//    float imDiag = sqrt(2 * pow(imSize / 2, 2));
+    greyTexture.draw(20 + imSize + 20, 20, imSize, imSize);
 
     ofPushMatrix();
     ofTranslate(20 + imSize + 20, 20 + camHeight + 20);
-//    ofRotate(-180);
     fftTexture.draw(0, 0, imSize, imSize / 2);
     ofPopMatrix();
     
@@ -209,7 +201,7 @@ void ofApp::draw(){
     ofPopMatrix();
     
     ofPushMatrix();
-    ofTranslate(20 + imSize + 20 + imSize + 20, 20 + camHeight + 20);
+    ofTranslate(20 + imSize + 20, 20 + camHeight + 20 + imSize + 20);
     fftFilteredOutTexture.draw(0, 0, imSize, imSize);
     ofPopMatrix();
 
