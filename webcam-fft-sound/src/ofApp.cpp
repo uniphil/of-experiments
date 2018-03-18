@@ -5,6 +5,10 @@ int max(int a, int b) { return a > b ? a : b; }
 float min(float a, float b) { return a < b ? a : b; }
 float max(float a, float b) { return a > b ? a : b; }
 
+float abs(kiss_fft_cpx s) {
+    return sqrt(pow(s.r, 2) + pow(s.i, 2));
+}
+
 //--------------------------------------------------------------
 void ofApp::setup(){
     ready = false;
@@ -37,6 +41,7 @@ void ofApp::setup(){
         fftGreyIn[i].i = 0.0;  // imaginary part is always zero
     }
 
+    ofSoundStreamSetup(2, 0, 44100, 128, 2);
     ofSetVerticalSync(true);
     ready = true;
 }
@@ -55,7 +60,7 @@ void ofApp::update(){
                 ofColor c = pixels.getColor(x + (camWidth - imSize) / 2, y + (camHeight - imSize) / 2);
                 float l = c.getLightness();
                 greyPixels.setColor(x, y, ofColor(l));
-                fftGreyIn[y * imSize + x].r = l;
+                fftGreyIn[y * imSize + x].r = ofMap(l, 0, 255, -1, 1);
             }
         }
 
@@ -69,12 +74,14 @@ void ofApp::update(){
         for (size_t x = 0; x < imSize / 2; x++) {
             for (size_t y = 0; y < imSize / 2; y++) {
                 int ring = sqrt(pow(x, 2) + pow(y, 2));
-                if (ring < imSize / 2) {
+                if (ring < 4) {
+                    fftPixels.setColor(x, y, ofColor(0xFF, 0x88, 0x00));
+                } else if (ring < imSize / 2) {
                     size_t outI = y * imSize + x;
                     kiss_fft_cpx out = fftOut[outI];
 
-                    float l = log(sqrt(pow(out.r, 2) + pow(out.i, 2)) / 255) * 16;
-                    fftPixels.setColor(x, y, ofColor(max(0.0, min(l, 255.0))));
+//                    float l = log(abs(out) / 255) * 16;
+                    fftPixels.setColor(x, y, ofColor(ofMap(abs(out), 0, 255, 0, 255, true)));
 
                     double theta = asin(y / (ring ? ring : 1));
                     double pan = theta / (PI / 2);  // quarter turn
@@ -120,9 +127,9 @@ void ofApp::draw(){
     ofPolyline leftSpectrum;
     ofPolyline rightSpectrum;
     for (int i = 0; i < imSize / 2; i++) {
-        float left = log(sqrt(pow(fftLeftIn[i].r, 2) + pow(fftLeftIn[i].i, 2))) * 3;
+        float left = abs(fftLeftIn[i]);
         leftSpectrum.addVertex(ofPoint(i, -left));
-        float right = log(sqrt(pow(fftRightIn[i].r, 2) + pow(fftRightIn[i].i, 2))) * 3;
+        float right = abs(fftRightIn[i]);
         rightSpectrum.addVertex(ofPoint(i, -right));
     }
 
@@ -139,6 +146,18 @@ void ofApp::draw(){
     rightSpectrum.draw();
     ofDrawLine(0, 0, imSize / 2, 0);
     ofPopMatrix();
+}
+
+//--------------------------------------------------------------
+void ofApp::audioOut(ofSoundBuffer &outBuffer) {
+    uint samplesSince = 0;
+    for (int i = 0; i < outBuffer.getNumFrames(); i++) {
+        float left = fftLeftOut[(audioStep + i) % imSize].r;
+        float right = fftRightOut[(audioStep + i) % imSize].r;
+        outBuffer.getSample(i, 0) = ofMap(left, -10000, 10000, -1, 1, true);
+        outBuffer.getSample(i, 1) = ofMap(right, -10000, 10000, -1, 1, true);
+    }
+    audioStep += outBuffer.getNumFrames();
 }
 
 //--------------------------------------------------------------

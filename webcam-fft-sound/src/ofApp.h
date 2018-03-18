@@ -10,6 +10,7 @@ class ofApp : public ofBaseApp{
 		void setup();
 		void update();
 		void draw();
+        void audioOut(ofSoundBuffer &outBuffer);
 
 		void keyPressed(int key);
 		void keyReleased(int key);
@@ -41,6 +42,8 @@ class ofApp : public ofBaseApp{
         kiss_fft_cpx * fftLeftOut;
         kiss_fft_cpx * fftRightIn;
         kiss_fft_cpx * fftRightOut;
+    
+        uint64_t audioStep;
 
         bool ready;
 };
