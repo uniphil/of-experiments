@@ -4,7 +4,7 @@
 #include "kiss_fft.h"
 #include "kiss-ndfft.hpp"
 
-#define N_FFT_OUT 512
+#define N_FFT_OUT 2048
 
 class ofApp : public ofBaseApp{
 
