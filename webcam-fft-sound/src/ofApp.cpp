@@ -205,28 +205,28 @@ void ofApp::draw(){
     fftFilteredOutTexture.draw(0, 0, imSize, imSize);
     ofPopMatrix();
 
-//    ofPolyline leftSpectrum;
-//    ofPolyline rightSpectrum;
-//    for (int i = 0; i < N_FFT_OUT; i++) {
-//        float left = abs(fftLeftIn[i]);
-//        leftSpectrum.addVertex(ofPoint(i / 2.0, -left));
-//        float right = abs(fftRightIn[i]);
-//        rightSpectrum.addVertex(ofPoint(i / 2.0, -right));
-//    }
-//
-//    ofPushMatrix();
-//    ofSetHexColor(0xFFFF00);
-//    ofTranslate(20 + imSize + 20 + imSize + 20, 20 + imSize + 20 + imSize / 2);
-//    leftSpectrum.draw();
-//    ofDrawLine(0, 0, imSize / 4, 0);
-//    ofPopMatrix();
-//
-//    ofPushMatrix();
-//    ofSetHexColor(0xFF0000);
-//    ofTranslate(20 + imSize + 20 + imSize + 20, 20 + imSize + 20 + imSize);
-//    rightSpectrum.draw();
-//    ofDrawLine(0, 0, imSize / 4, 0);
-//    ofPopMatrix();
+    ofPolyline leftSpectrum;
+    ofPolyline rightSpectrum;
+    for (int i = 0; i < N_FFT_OUT; i++) {
+        float left = abs(fftLeftIn[i]) / 2.0;
+        leftSpectrum.addVertex(ofPoint(i / 2.0, -left));
+        float right = abs(fftRightIn[i]) / 2.0;
+        rightSpectrum.addVertex(ofPoint(i / 2.0, -right));
+    }
+
+    ofPushMatrix();
+    ofSetHexColor(0xFFFF00);
+    ofTranslate(20 + imSize + 20 + imSize + 20, 20 + imSize + 20 + imSize / 2);
+    leftSpectrum.draw();
+    ofDrawLine(0, 0, imSize / 4, 0);
+    ofPopMatrix();
+
+    ofPushMatrix();
+    ofSetHexColor(0xFF0000);
+    ofTranslate(20 + imSize + 20 + imSize + 20, 20 + imSize + 20 + imSize);
+    rightSpectrum.draw();
+    ofDrawLine(0, 0, imSize / 4, 0);
+    ofPopMatrix();
 }
 
 //--------------------------------------------------------------
