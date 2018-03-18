@@ -13,6 +13,10 @@ ofColor heat(float l) {
     return ofColor(min(l, 255.0), min(l / 4, 255.0), l > 1024 ? 255 : 0);
 }
 
+ofColor cool(float l) {
+    return ofColor(l > 1024 ? 255 : 0, min(l / 4, 255.0), min(l, 255.0));
+}
+
 //--------------------------------------------------------------
 void ofApp::setup(){
     ready = false;
@@ -94,7 +98,7 @@ void ofApp::update(){
                 maxByRadius[i].cpx.r = maxByRadius[i].cpx.i = 0;
             }
             for (int j = 0; j < imSize; j++) {
-                fftFilteredIn[i].r = fftFilteredIn[i].i = 0;
+                fftFilteredIn[i * imSize + j].r = fftFilteredIn[i * imSize + j].i = 0;
                 if (j < imSize / 2) {
                     fftFilteredPixels.setColor(i, j, 0);
                 }
@@ -171,8 +175,11 @@ void ofApp::update(){
         
         for (int x = 0; x < imSize; x++) {
             for (int y = 0; y < imSize; y++) {
-                ofColor c = heat(abs(fftFilteredOut[y * imSize + x]) / 64);
-                fftFilteredOutPixels.setColor(x, y, c);
+                int shift = pow(-1, x + y);  // uncentre the fft
+                float clamp = 10000;
+//                float c = ofMap(, -clamp, clamp, 0, 255, true);
+                float l = fftFilteredOut[y * imSize + x].r * shift / 32;
+                fftFilteredOutPixels.setColor(x, y, cool(max(l, 0.0)));
             }
         }
         fftFilteredOutTexture.loadData(fftFilteredOutPixels);
