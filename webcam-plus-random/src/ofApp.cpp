@@ -33,8 +33,8 @@ void load(im & i) {
 void ofApp::setup(){
     ready = false;
     
-    camWidth = 320;
-    camHeight = 240;
+    camWidth = 640;
+    camHeight = 480;
     imSize = min(camWidth, camHeight);
 
     vidGrabber.setDeviceID(0);
@@ -108,9 +108,10 @@ void ofApp::update(){
 //--------------------------------------------------------------
 void ofApp::draw(){
     ofBackground(0);
-    grey.tex.draw(20, 20, imSize, imSize);
-    fft.tex.draw(20 + imSize + 20, 20, imSize, imSize);
-    out.tex.draw(20 + imSize + 20 + imSize + 20, 20, imSize, imSize);
+    int y = ofGetHeight() / 2 - imSize / 2;
+    grey.tex.draw(0, y);
+    fft.tex.draw(imSize, y);
+    out.tex.draw(imSize * 2, y);
 }
 
 //--------------------------------------------------------------
