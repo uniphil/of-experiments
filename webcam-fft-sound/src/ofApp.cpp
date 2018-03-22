@@ -172,7 +172,7 @@ void ofApp::update(){
             for (int y = 0; y < imSize; y++) {
                 int shift = pow(-1, x + y);  // uncentre the fft
                 float clamp = 10000;
-                float l = fftFilteredOut[y * imSize + x].r * shift / 32;
+                float l = fftFilteredOut[y * imSize + x].r * shift; // / 32;
                 fftFilteredOutPixels.setColor(x, y, cool(max(l, 0.0)));
             }
         }
@@ -258,7 +258,6 @@ void ofApp::mouseMoved(int x, int y ){
 
 //--------------------------------------------------------------
 void ofApp::mouseDragged(int x, int y, int button){
-
 }
 
 //--------------------------------------------------------------
