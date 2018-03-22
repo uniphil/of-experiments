@@ -67,6 +67,11 @@ void ofApp::update(){
         for (int y = 0; y < imSize; y++) {
             ofColor c = source.getColor(x + (camWidth - imSize) / 2, y + (camHeight - imSize) / 2);
             double l = c.getLightness();
+            double r = ofDist(imSize / 2, imSize / 2, x, y);
+            double w = r <= (imSize / 2)  // radial hanning
+                ? 0.5 - 0.5 * cos(PI * (1 - r / ((double)imSize / 2)))
+                : 0;
+            l *= w;  // apply window
             grey.pix.setColor(x, y, l);
             l = ofMap(l, 0, 255, -1, 1);
             l *= pow(-1, x + y);  // centre fft
@@ -81,12 +86,18 @@ void ofApp::update(){
     float randRange = ofMap(mouseX, 0, ofGetWidth(), 0, 1, true);
 
     for (int x = 0; x < imSize; x++) {
-        for (int y = 0; y < imSize; y++) {
-            kiss_fft_cpx & p = freqSamples[y * imSize + x];
+        for (int y = 0; y < imSize / 2; y++) {
+            int i = y * imSize + x;
+            int ii = imSize * imSize - i;
+            kiss_fft_cpx & p = freqSamples[i];
+            kiss_fft_cpx & pi = freqSamples[ii];
             float r = ofRandom(-randRange, randRange);
 //            scale(p, 1 + r * 5);
+//            scale(pi, 1 + r * 5);
             rotate(p, r * PI);
+            rotate(pi, r * PI);
             fft.pix.setColor(x, y, ofMap(abs(p), 0, imSize, 0, 255, true));
+            fft.pix.setColor(imSize - x, imSize - y, ofMap(abs(pi), 0, imSize, 0, 255, true));
         }
     }
 
