@@ -36,6 +36,8 @@ class ofApp : public ofBaseApp{
     im grey;
     im noise;
     im out;
+    
+    float * staticNoise;
 
     kiss_fftnd_cfg forwardCfg;
     kiss_fftnd_cfg inverseCfg;

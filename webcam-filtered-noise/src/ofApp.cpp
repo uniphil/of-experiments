@@ -29,6 +29,12 @@ void load(im & i) {
     i.tex.loadData(i.pix);
 }
 
+void setNoise(float * staticNoise, int imSize) {
+    for (int i = 0; i < imSize * imSize; i++) {
+        staticNoise[i] = ofRandom(-1, 1);
+    }
+}
+
 //--------------------------------------------------------------
 void ofApp::setup(){
     ready = false;
@@ -52,6 +58,9 @@ void ofApp::setup(){
     noiseSamples = new kiss_fft_cpx[imSize * imSize];
     noiseFreqs = new kiss_fft_cpx[imSize * imSize];
     outSamples = new kiss_fft_cpx[imSize * imSize];
+    
+    staticNoise = new float[imSize * imSize];
+    setNoise(staticNoise, imSize);
 
     ofSetVerticalSync(true);
     ready = true;
@@ -66,7 +75,7 @@ void ofApp::update(){
     ofPixels & source = vidGrabber.getPixels();
     source.mirror(false, true);
 
-    float randRange = ofMap(mouseX, 0, ofGetWidth(), 0, 1, true);
+    float amount = ofMap(mouseX, 0, ofGetWidth(), 0, 1, true);
 
     for (int x = 0; x < imSize; x++) {
         for (int y = 0; y < imSize; y++) {
@@ -83,7 +92,8 @@ void ofApp::update(){
             greySamples[y * imSize + x].i = 0;
             greySamples[y * imSize + x].r = l;
 
-            double rl = ofRandom(-randRange, randRange);
+//            double rl = ofRandom(-randRange, randRange);
+            double rl = staticNoise[y * imSize + x];
 //            noise.pix.setColor(x, y, ofMap(rl, -1, 1, 0, 255));
             noiseSamples[y * imSize + x].i = 0;
             noiseSamples[y * imSize + x].r = rl;
@@ -98,10 +108,10 @@ void ofApp::update(){
         for (int y = 0; y < imSize / 2; y++) {
             int i = y * imSize + x;
             int ii = imSize * imSize - i;
-            kiss_fft_cpx & p = greyFreqs[i];
-            kiss_fft_cpx & pi = greyFreqs[ii];
+            kiss_fft_cpx & p = noiseFreqs[i];
+            kiss_fft_cpx & pi = noiseFreqs[ii];
 
-            float r = abs(noiseFreqs[i]) / 10;
+            float r = 1 + (abs(greyFreqs[i]) / 10 - 1) * amount;
             scale(p, r);
             scale(pi, r);
 
@@ -113,7 +123,7 @@ void ofApp::update(){
     }
 
 //    load(fft);
-    kiss_fftnd(inverseCfg, greyFreqs, outSamples);
+    kiss_fftnd(inverseCfg, noiseFreqs, outSamples);
  
     for (int x = 0; x < imSize; x++) {
         for (int y = 0; y < imSize; y++) {
@@ -141,7 +151,7 @@ void ofApp::draw(){
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-
+    setNoise(staticNoise, imSize);
 }
 
 //--------------------------------------------------------------
