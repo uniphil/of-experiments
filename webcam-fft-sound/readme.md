@@ -2,11 +2,11 @@
 
 an attempt at meaningfully (whatever that means) transforming video data into sound:
 
-    - webcam image is processed with a 2d fourier transform into the frequency domain
-    - each bin in the frequency domain is search to find the higest amplitude for every frequency (ignoring angle). These highest-per-frequency bin amplitudes are copied into a 1d array of [amplitude, angle] pairs.
-    - this 1d/linear set of frequency bin + angle pairs are then used to
-        1. recreate an image with only this information (blue weird texture thing at the bottom)
-        2. synthesize chunks of audio with a 1d inverse fourier transform (two transforms are actually run, the angle information is used to pan frequency bins left/right for stereo audio)
+- webcam image is processed with a 2d fourier transform into the frequency domain
+- each bin in the frequency domain is search to find the higest amplitude for every frequency (ignoring angle). These highest-per-frequency bin amplitudes are copied into a 1d array of [amplitude, angle] pairs.
+- this 1d/linear set of frequency bin + angle pairs are then used to
+    1. recreate an image with only this information (blue weird texture thing at the bottom)
+    2. synthesize chunks of audio with a 1d inverse fourier transform (two transforms are actually run, the angle information is used to pan frequency bins left/right for stereo audio)
 
 ![processing steps depicted visually: input image, fourier transform, filtered fourier transform, inverse image from the transformed input, stereo audio frequency bins generated](bin/data/demo.jpg)
 
