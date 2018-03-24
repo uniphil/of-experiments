@@ -7,6 +7,11 @@ void scale(kiss_fft_cpx & cpx, double x) {
     cpx.i *= x;
 }
 
+void scale(kiss_fft_cpx & cpx, kiss_fft_cpx s) {
+    double dot = cpx.r * s.r + cpx.i * s.i;
+    scale(cpx, dot);
+}
+
 void rotate(kiss_fft_cpx & cpx, double theta) {
     double cosT = cos(theta);
     double sinT = sin(theta);
@@ -92,8 +97,8 @@ void ofApp::update(){
             greySamples[y * imSize + x].i = 0;
             greySamples[y * imSize + x].r = l;
 
-//            double rl = ofRandom(-randRange, randRange);
-            double rl = staticNoise[y * imSize + x];
+            double rl = ofRandom(-amount, amount);
+//            double rl = staticNoise[y * imSize + x];
 //            noise.pix.setColor(x, y, ofMap(rl, -1, 1, 0, 255));
             noiseSamples[y * imSize + x].i = 0;
             noiseSamples[y * imSize + x].r = rl;
@@ -111,9 +116,8 @@ void ofApp::update(){
             kiss_fft_cpx & p = noiseFreqs[i];
             kiss_fft_cpx & pi = noiseFreqs[ii];
 
-            float r = 1 + (abs(greyFreqs[i]) / 10 - 1) * amount;
-            scale(p, r);
-            scale(pi, r);
+            scale(p, greyFreqs[i]);
+            scale(pi, greyFreqs[ii]);
 
 //            rotate(p, r * PI);
 //            rotate(pi, r * PI);
