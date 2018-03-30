@@ -15,8 +15,9 @@
 #define H 720
 #define N 512
 #define P 512
-#define RP 8
-#define ATTACK 0.1
+#define RP 4
+#define ATTACK 0.05
+#define DECAY 0.1
 #define RELEASE 0.5
 #define HARMONICS 8
 

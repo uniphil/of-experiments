@@ -16,27 +16,34 @@ Sound::Sound(unsigned int pitch, double velocity, uint64_t now) {
 }
 
 float Sound::getSample(uint64_t at, kiss_fft_cpx * frequencies, unsigned int n) {
-    double dt = (at - on) / 1000000.0;
+    double dt = (at - on) / (double)F;
     double a = 0;
     double envelope = 1.0;
     if (dt < ATTACK) {
-        envelope = ofMap(dt, 0, ATTACK, 0, 1);
+        envelope *= ofMap(dt, 0, ATTACK, 0, 1, true);
+    } else {
+        envelope *= 1 / (1 + pow(dt, 2) * pow(DECAY * 10, 2));
     }
     if (!alive) {
-        envelope *= ofMap(dt, (at - off) / 1000000.0, (at - off / 1000000.0) + RELEASE, 1, 0, true);
+        envelope *= ofMap(at, off, off + RELEASE * F, 1, 0, true);
     }
     for (int harmonic = 0; harmonic < HARMONICS; harmonic++) {
         double f = frequency * harmonic;
         int bin = round(ofMap(f, 0, 20000, 0, n/2));
         double h = abs(frequencies[bin]);
-        a += h * sin(dt * TWO_PI * f) / (1 + harmonic);
+        a += h * sin(dt * TWO_PI * f); // / (1 + harmonic);
     }
-    a /= HARMONICS;
+    a /= HARMONICS * 2;
     return a * envelope;
 }
 
 bool Sound::active() {
     return alive;
+}
+
+bool Sound::dead(uint64_t when) {
+    return !alive &&
+           when > off + RELEASE * F;
 }
 
 void Sound::release(uint64_t now) {

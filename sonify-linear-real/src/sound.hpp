@@ -17,6 +17,7 @@ public:
     Sound(unsigned int pitch, double velocity, uint64_t on);
     float getSample(uint64_t at, kiss_fft_cpx * frequencies, unsigned int n);
     bool active();
+    bool dead(uint64_t when);
     void release(uint64_t now);
     unsigned int pitch;
 private:

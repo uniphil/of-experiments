@@ -48,6 +48,18 @@ void ofApp::update(){
 
         kiss_fft(forward, linearized, frequencies);
     }
+    
+    vector <unsigned int> pitchesToRemove;
+    for (int i = 0; i < notes.size(); i++) {
+        Sound note = notes[i];
+        if (note.dead(audioFrame)) pitchesToRemove.push_back(note.pitch);
+    }
+    for (int i = 0; i < pitchesToRemove.size(); i++) {
+        unsigned int pitch = pitchesToRemove[i];
+        size_t j;
+        for (j = 0; (notes[j].pitch != pitch) && j < notes.size(); j++);
+        notes.erase(notes.begin() + j);
+    }
 }
 
 //--------------------------------------------------------------
@@ -85,8 +97,9 @@ void ofApp::audioOut(ofSoundBuffer &outBuffer) {
         t = (audioFrame + frame) * 1000000 / F;
         float a = 0;
         for (int i = 0; i < notes.size(); i++) {
-            a += notes[i].getSample(t, frequencies, N);
+            a += notes[i].getSample(audioFrame + frame, frequencies, N);
         }
+        a /= 8;
         outBuffer.getSample(frame, 0) = a;
         outBuffer.getSample(frame, 1) = a;
     }
@@ -101,6 +114,8 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
 void ofApp::keyPressed(int key) {
     int pitch = keyToPitch(key);
     if (pitch == -1) return;
+    for (int i = 0; i < notes.size(); i++)
+        if (notes[i].pitch == keyToPitch(key) && notes[i].active()) return;
     notes.push_back(Sound(pitch, 1.0, audioFrame));
 }
 
@@ -108,7 +123,7 @@ void ofApp::keyPressed(int key) {
 void ofApp::keyReleased(int key){
     for (int i = 0; i < notes.size(); i++) {
         Sound & note = notes[i];
-        if (!(note.pitch == keyToPitch(key))) continue;
+        if (note.pitch != keyToPitch(key)) continue;
         if (!note.active()) continue;
         note.release(audioFrame);
         break;
