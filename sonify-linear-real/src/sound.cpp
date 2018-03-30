@@ -8,11 +8,11 @@
 #include "sound.hpp"
 
 Sound::Sound(unsigned int pitch, double velocity, uint64_t now) {
-    alive = true;
+    this->alive = true;
     this->pitch = pitch;
-    frequency = pow(2, ((int)pitch - 69) / 12.0) * 440;
+    this->frequency = pow(2, ((int)pitch - 69) / 12.0) * 440;
     this->velocity = velocity;
-    on = now;
+    this->on = now;
 }
 
 float Sound::getSample(uint64_t at, kiss_fft_cpx * frequencies, unsigned int n) {
@@ -31,9 +31,9 @@ float Sound::getSample(uint64_t at, kiss_fft_cpx * frequencies, unsigned int n) 
         double f = frequency * harmonic;
         int bin = round(ofMap(f, 0, 20000, 0, n/2));
         double h = abs(frequencies[bin]);
-        a += h * sin(dt * TWO_PI * f); // / (1 + harmonic);
+        a += h * sin(dt * TWO_PI * f) / (1 + harmonic);
     }
-    a /= HARMONICS * 2;
+    a /= HARMONICS * 3;
     return a * envelope;
 }
 

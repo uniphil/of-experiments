@@ -17,6 +17,9 @@ void ofApp::setup(){
     
     ofSoundStreamSetup(2, 0, F, P, 2);
 
+    midiIn.openPort(0);
+    midiIn.addListener(this);
+
     ofSetBackgroundAuto(false);
     ofBackground(0);
 }
@@ -108,22 +111,38 @@ void ofApp::audioOut(ofSoundBuffer &outBuffer) {
 
 //--------------------------------------------------------------
 void ofApp::newMidiMessage(ofxMidiMessage& msg) {
+    if (msg.velocity > 0) {
+        noteOn(msg.pitch, msg.velocity / 127.0);
+    } else {
+        noteOff(msg.pitch);
+    }
 }
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key) {
     int pitch = keyToPitch(key);
     if (pitch == -1) return;
-    for (int i = 0; i < notes.size(); i++)
-        if (notes[i].pitch == keyToPitch(key) && notes[i].active()) return;
-    notes.push_back(Sound(pitch, 1.0, audioFrame));
+    noteOn(pitch, 1.0);
 }
 
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key){
+    unsigned int pitch = keyToPitch(key);
+    noteOff(pitch);
+}
+
+//--------------------------------------------------------------
+void ofApp::noteOn(unsigned int pitch, double velocity){
+    for (int i = 0; i < notes.size(); i++)
+        if (notes[i].pitch == pitch && notes[i].active()) return;
+    notes.push_back(Sound(pitch, velocity, audioFrame));
+}
+
+//--------------------------------------------------------------
+void ofApp::noteOff(unsigned int pitch){
     for (int i = 0; i < notes.size(); i++) {
         Sound & note = notes[i];
-        if (note.pitch != keyToPitch(key)) continue;
+        if (note.pitch != pitch) continue;
         if (!note.active()) continue;
         note.release(audioFrame);
         break;
