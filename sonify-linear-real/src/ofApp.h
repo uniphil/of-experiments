@@ -1,22 +1,27 @@
 #pragma once
 
 #include "ofMain.h"
+#include "ofxMidi.h"
 #include "kiss_fft.h"
+#include "utils.hpp"
 #include "hann.hpp"
+#include "sound.hpp"
 
 #define F 44100
 #define W 1280
 #define H 720
 #define N 512
 #define P 512
-#define RP 4
+#define RP 8
 
-class ofApp : public ofBaseApp{
+class ofApp : public ofBaseApp, public ofxMidiListener {
 
 	public:
 		void setup();
 		void update();
 		void draw();
+        void audioOut(ofSoundBuffer &outBuffer);
+        void newMidiMessage(ofxMidiMessage& eventArgs);
 
 		void keyPressed(int key);
 		void keyReleased(int key);
@@ -40,4 +45,12 @@ class ofApp : public ofBaseApp{
     kiss_fft_cpx * frequencies;
 
     double theta;
+    
+    uint64_t audioFrame;
+
+    vector <Sound> notes;
+
+    Sound * sound;
+    
+    float lastRepitch;
 };

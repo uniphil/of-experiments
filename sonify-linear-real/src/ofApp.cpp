@@ -1,9 +1,5 @@
 #include "ofApp.h"
 
-double abs(kiss_fft_cpx p) {
-    return sqrt(pow(p.r, 2) + pow(p.i, 2));
-}
-
 //--------------------------------------------------------------
 void ofApp::setup(){
     source.setup(W, H);
@@ -17,9 +13,15 @@ void ofApp::setup(){
     frequencies = new kiss_fft_cpx[N];
     
     theta = 0;
+    
+    ofSoundStreamSetup(2, 0, F, P, 2);
+
+    sound = new Sound(69, 1.0, 0);
 
     ofSetBackgroundAuto(false);
     ofBackground(0);
+    
+    lastRepitch = ofGetElapsedTimef();
 }
 
 //--------------------------------------------------------------
@@ -42,11 +44,17 @@ void ofApp::update(){
         for (int i = 0; i < N; i++) {
             int x = ofMap(i, 0, N, -N / 2, N / 2) * cos(theta) + N / 2;
             int y = ofMap(i, 0, N, -N / 2, N / 2) * sin(theta) + N / 2;
-            linearized[i].r = framed.getColor(x, y).getLightness();
+            linearized[i].r = .9 * linearized[i].r +
+                              .1 * framed.getColor(x, y).getLightness();
         }
         window->apply(linearized);
 
         kiss_fft(forward, linearized, frequencies);
+    }
+    
+    if (ofGetElapsedTimef() > lastRepitch + 0.4) {
+        sound->repitch(round(ofRandom(40, 70)));
+        lastRepitch = ofGetElapsedTimef();
     }
 }
 
@@ -76,6 +84,22 @@ void ofApp::draw(){
         ofDrawCircle(i, ofGetFrameNum() % N, 1);
     }
     ofPopMatrix();
+}
+
+//--------------------------------------------------------------
+void ofApp::audioOut(ofSoundBuffer &outBuffer) {
+    uint64_t t;
+    for (size_t frame = 0; frame < outBuffer.getNumFrames(); frame++) {
+        t = (audioFrame + frame) * 1000000 / F;
+        float a = sound->getSample(t, frequencies, N);
+        outBuffer.getSample(frame, 0) = a;
+        outBuffer.getSample(frame, 1) = a;
+    }
+    audioFrame += outBuffer.getNumFrames();
+}
+
+//--------------------------------------------------------------
+void ofApp::newMidiMessage(ofxMidiMessage& msg) {
 }
 
 //--------------------------------------------------------------

@@ -1,1 +1,2 @@
 ofxFft
+ofxMidi
