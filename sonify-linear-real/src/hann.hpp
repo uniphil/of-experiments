@@ -9,6 +9,7 @@
 #define hann_hpp
 
 #include <math.h>
+#include "kiss_fft.h"
 
 #define TWO_PI 6.283185307179586476925286766559005768394338798750211641949
 
@@ -19,6 +20,8 @@ private:
 public:
     Hann(unsigned int N);
     void apply(double * samples);
+    void apply(kiss_fft_cpx * samples);
+    void apply(kiss_fft_cpx * samples, bool scaleReal);
 };
 
 #endif /* hann_hpp */

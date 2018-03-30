@@ -1,5 +1,9 @@
 #include "ofApp.h"
 
+double abs(kiss_fft_cpx p) {
+    return sqrt(pow(p.r, 2) + pow(p.i, 2));
+}
+
 //--------------------------------------------------------------
 void ofApp::setup(){
     source.setup(W, H);
@@ -15,6 +19,7 @@ void ofApp::setup(){
     theta = 0;
 
     ofSetBackgroundAuto(false);
+    ofBackground(0);
 }
 
 //--------------------------------------------------------------
@@ -33,12 +38,15 @@ void ofApp::update(){
         }
         framed.mirror(false, true);
         framed.update();
-    }
 
-    for (int i = 0; i < N; i++) {
-        int x = ofMap(i, 0, N, -N / 2, N / 2) * cos(theta) + N / 2;
-        int y = ofMap(i, 0, N, -N / 2, N / 2) * sin(theta) + N / 2;
-        linearized[i].r = framed.getColor(x, y).getLightness();
+        for (int i = 0; i < N; i++) {
+            int x = ofMap(i, 0, N, -N / 2, N / 2) * cos(theta) + N / 2;
+            int y = ofMap(i, 0, N, -N / 2, N / 2) * sin(theta) + N / 2;
+            linearized[i].r = framed.getColor(x, y).getLightness();
+        }
+        window->apply(linearized);
+
+        kiss_fft(forward, linearized, frequencies);
     }
 }
 
@@ -57,6 +65,14 @@ void ofApp::draw(){
     ofTranslate(N, 0);
     for (int i = 0; i < N; i++) {
         ofSetColor(linearized[i].r);
+        ofDrawCircle(i, ofGetFrameNum() % N, 1);
+    }
+    ofPopMatrix();
+    
+    ofPushMatrix();
+    ofTranslate(N*2, 0);
+    for (int i = 0; i < N / 2; i++) {
+        ofSetColor(log(abs(frequencies[i])) * 10);
         ofDrawCircle(i, ofGetFrameNum() % N, 1);
     }
     ofPopMatrix();

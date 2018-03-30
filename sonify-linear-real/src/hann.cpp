@@ -20,3 +20,14 @@ void Hann::apply(double * samples) {
         samples[i] *= window[i];
     }
 }
+
+void Hann::apply(kiss_fft_cpx * samples) {
+    apply(samples, false);
+}
+
+void Hann::apply(kiss_fft_cpx * samples, bool scaleReal) {
+    for (int i = 0; i < n; i++) {
+        samples[i].r *= window[i];
+        scaleReal && (samples[i].i *= window[i]);
+    }
+}

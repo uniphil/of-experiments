@@ -9,7 +9,7 @@
 #define H 720
 #define N 512
 #define P 512
-#define RP 8
+#define RP 4
 
 class ofApp : public ofBaseApp{
 
