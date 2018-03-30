@@ -7,11 +7,11 @@
 
 #include "hann.hpp"
 
-Hann::Hann(unsigned int N) {
-    n = N;
-    window = new double[N];
-    for (int i = 0; i < N; i++) {
-        window[i] = 0.5 * (1 - cos(TWO_PI * i / (N - 1)));
+Hann::Hann(unsigned int n) {
+    this->n = n;
+    window = new double[n];
+    for (int i = 0; i < n; i++) {
+        window[i] = 0.5 * (1 - cos(TWO_PI * i / (n - 1)));
     }
 }
 

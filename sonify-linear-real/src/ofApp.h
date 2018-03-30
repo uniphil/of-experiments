@@ -7,13 +7,6 @@
 #include "hann.hpp"
 #include "sound.hpp"
 
-#define F 44100
-#define W 1280
-#define H 720
-#define N 512
-#define P 512
-#define RP 8
-
 class ofApp : public ofBaseApp, public ofxMidiListener {
 
 	public:
@@ -49,8 +42,4 @@ class ofApp : public ofBaseApp, public ofxMidiListener {
     uint64_t audioFrame;
 
     vector <Sound> notes;
-
-    Sound * sound;
-    
-    float lastRepitch;
 };

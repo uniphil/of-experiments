@@ -15,9 +15,10 @@
 class Sound {
 public:
     Sound(unsigned int pitch, double velocity, uint64_t on);
-    float getSample(uint64_t at, kiss_fft_cpx * frequencies, unsigned int N);
+    float getSample(uint64_t at, kiss_fft_cpx * frequencies, unsigned int n);
+    bool active();
     void release(uint64_t now);
-    void repitch(unsigned int to);
+    unsigned int pitch;
 private:
     double frequency;
     double velocity;

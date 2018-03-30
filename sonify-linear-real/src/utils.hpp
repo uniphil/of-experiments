@@ -10,8 +10,18 @@
 
 #include "kiss_fft.h"
 
-#define HARMONICS 4
+#define F 44100
+#define W 1280
+#define H 720
+#define N 512
+#define P 512
+#define RP 8
+#define ATTACK 0.1
+#define RELEASE 0.5
+#define HARMONICS 8
 
 double abs(kiss_fft_cpx p);
+
+int keyToPitch(int key);
 
 #endif /* utils_hpp */

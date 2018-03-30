@@ -9,19 +9,16 @@ void ofApp::setup(){
 
     forward = kiss_fft_alloc(N, false, 0, 0);
     linearized = new kiss_fft_cpx[N];
-    for (int i = 0; i < N; i++) linearized[i].i = 0;
+    for (int i = 0; i < N; i++) linearized[i].r = linearized[i].i = 0;
     frequencies = new kiss_fft_cpx[N];
+    for (int i = 0; i < N; i++) frequencies[i].r = frequencies[i].i = 0;
     
     theta = 0;
     
     ofSoundStreamSetup(2, 0, F, P, 2);
 
-    sound = new Sound(69, 1.0, 0);
-
     ofSetBackgroundAuto(false);
     ofBackground(0);
-    
-    lastRepitch = ofGetElapsedTimef();
 }
 
 //--------------------------------------------------------------
@@ -50,11 +47,6 @@ void ofApp::update(){
         window->apply(linearized);
 
         kiss_fft(forward, linearized, frequencies);
-    }
-    
-    if (ofGetElapsedTimef() > lastRepitch + 0.4) {
-        sound->repitch(round(ofRandom(40, 70)));
-        lastRepitch = ofGetElapsedTimef();
     }
 }
 
@@ -91,7 +83,10 @@ void ofApp::audioOut(ofSoundBuffer &outBuffer) {
     uint64_t t;
     for (size_t frame = 0; frame < outBuffer.getNumFrames(); frame++) {
         t = (audioFrame + frame) * 1000000 / F;
-        float a = sound->getSample(t, frequencies, N);
+        float a = 0;
+        for (int i = 0; i < notes.size(); i++) {
+            a += notes[i].getSample(t, frequencies, N);
+        }
         outBuffer.getSample(frame, 0) = a;
         outBuffer.getSample(frame, 1) = a;
     }
@@ -103,13 +98,21 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
 }
 
 //--------------------------------------------------------------
-void ofApp::keyPressed(int key){
-
+void ofApp::keyPressed(int key) {
+    int pitch = keyToPitch(key);
+    if (pitch == -1) return;
+    notes.push_back(Sound(pitch, 1.0, audioFrame));
 }
 
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key){
-
+    for (int i = 0; i < notes.size(); i++) {
+        Sound & note = notes[i];
+        if (!(note.pitch == keyToPitch(key))) continue;
+        if (!note.active()) continue;
+        note.release(audioFrame);
+        break;
+    }
 }
 
 //--------------------------------------------------------------

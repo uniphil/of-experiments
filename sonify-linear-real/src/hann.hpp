@@ -18,7 +18,7 @@ private:
     double * window;
     unsigned int n;
 public:
-    Hann(unsigned int N);
+    Hann(unsigned int n);
     void apply(double * samples);
     void apply(kiss_fft_cpx * samples);
     void apply(kiss_fft_cpx * samples, bool scaleReal);
