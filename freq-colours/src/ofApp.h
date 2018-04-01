@@ -28,9 +28,7 @@ class ofApp : public ofBaseApp{
     ofVideoGrabber camera;
     size_t imSize;
     ofImage windowed;
-    ofImage resultR;
-    ofImage resultG;
-    ofImage resultB;
+    ofImage result;
 
     kiss_fftnd_cfg forward;
     kiss_fftnd_cfg inverse;

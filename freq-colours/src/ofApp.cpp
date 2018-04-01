@@ -14,9 +14,7 @@ void ofApp::setup(){
     camera.setup(W, H);
     imSize = min(camera.getWidth(), camera.getHeight());
     windowed.allocate(imSize, imSize, OF_IMAGE_GRAYSCALE);
-    resultR.allocate(imSize, imSize, OF_IMAGE_COLOR);
-    resultG.allocate(imSize, imSize, OF_IMAGE_COLOR);
-    resultB.allocate(imSize, imSize, OF_IMAGE_COLOR);
+    result.allocate(imSize, imSize, OF_IMAGE_COLOR);
 
     int dims [2] = { (int)imSize, (int)imSize };
     forward = kiss_fftnd_alloc(dims, 2, false, 0, 0);
@@ -54,18 +52,23 @@ void ofApp::update(){
             l *= pow(-1, x + y);
             grey[y * imSize + x].r = l;
             grey[y * imSize + x].i = 0;
+
+            result.setColor(x, y, 0);
         }
     }
     windowed.update();
 
     kiss_fftnd(forward, grey, freqs);
     
-    int cycles = ofMap(mouseX, 0, ofGetWidth(), 1, 500, true) * 2;
+    int cycles = ofMap(mouseX, 0, ofGetWidth(), 1, 200, true);
+
+    double colourCycle = ofGetElapsedTimeMillis() / 1000. * TWO_PI / 2;
 
     double slice = TWO_PI / 6;
     for (int y = 0; y < imSize; y++) {
         for (int x = 0; x < imSize; x++) {
             double theta = atan2(-y + (int)imSize / 2, x - (int)imSize / 2) * cycles;
+            theta += colourCycle;
             theta = fmod(theta + TWO_PI, TWO_PI);
             double r, g, b;
             if (theta < 1 * slice) {
@@ -110,23 +113,19 @@ void ofApp::update(){
             double r = outR[i].r * scale,
                    g = outG[i].r * scale,
                    b = outB[i].r * scale;
-            resultR.setColor(x, y, ofColor(r, 0, 0));
-            resultG.setColor(x, y, ofColor(0, g, 0));
-            resultB.setColor(x, y, ofColor(0, 0, b));
+            result.setColor(x, y, ofColor(r, g, b));
         }
     }
-    resultR.update();
-    resultG.update();
-    resultB.update();
+    result.update();
+
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
     ofBackground(255);
-    int y = ofGetHeight() / 2 - imSize / 2;
-    resultR.draw(0, y);
-    resultG.draw(imSize * 2, y);
-    resultB.draw(imSize, y);
+//    windowed.draw(0, 0);
+    int smaller = min(ofGetHeight(), ofGetWidth());
+    result.draw(ofGetWidth() / 2 - smaller / 2, ofGetHeight() / 2 - smaller / 2, smaller, smaller);
 }
 
 //--------------------------------------------------------------
