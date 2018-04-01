@@ -14,7 +14,9 @@ void ofApp::setup(){
     camera.setup(W, H);
     imSize = min(camera.getWidth(), camera.getHeight());
     windowed.allocate(imSize, imSize, OF_IMAGE_GRAYSCALE);
-    result.allocate(imSize, imSize, OF_IMAGE_COLOR);
+    resultR.allocate(imSize, imSize, OF_IMAGE_COLOR);
+    resultG.allocate(imSize, imSize, OF_IMAGE_COLOR);
+    resultB.allocate(imSize, imSize, OF_IMAGE_COLOR);
 
     int dims [2] = { (int)imSize, (int)imSize };
     forward = kiss_fftnd_alloc(dims, 2, false, 0, 0);
@@ -52,8 +54,6 @@ void ofApp::update(){
             l *= pow(-1, x + y);
             grey[y * imSize + x].r = l;
             grey[y * imSize + x].i = 0;
-
-            result.setColor(x, y, 0);
         }
     }
     windowed.update();
@@ -110,21 +110,23 @@ void ofApp::update(){
             double r = outR[i].r * scale,
                    g = outG[i].r * scale,
                    b = outB[i].r * scale;
-//            v /= pow(imSize, 2);
-//            v *= pow(-1, x + y);
-            result.setColor(x, y, ofColor(r, g, b));
+            resultR.setColor(x, y, ofColor(r, 0, 0));
+            resultG.setColor(x, y, ofColor(0, g, 0));
+            resultB.setColor(x, y, ofColor(0, 0, b));
         }
     }
-    result.update();
-
+    resultR.update();
+    resultG.update();
+    resultB.update();
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
     ofBackground(255);
-//    windowed.draw(0, 0);
-    int smaller = min(ofGetHeight(), ofGetWidth());
-    result.draw(ofGetWidth() / 2 - smaller / 2, ofGetHeight() / 2 - smaller / 2, smaller, smaller);
+    int y = ofGetHeight() / 2 - imSize / 2;
+    resultR.draw(0, y);
+    resultG.draw(imSize * 2, y);
+    resultB.draw(imSize, y);
 }
 
 //--------------------------------------------------------------
